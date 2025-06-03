@@ -1,0 +1,60 @@
+name: Publish to PyPI
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  build-and-publish:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.x
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.x"
+
+      - name: Install build tools
+        run: |
+          python -m pip install --upgrade pip build twine
+
+      - name: Build source and wheel distributions
+        run: |
+          python -m build
+
+      - name: Publish to PyPI
+        env:
+          TWINE_USERNAME: __token__
+          TWINE_PASSWORD: ${{ secrets.PYPI_API_TOKEN }}
+        run: |
+          python -m twine upload dist/*
+
+      # If we reach this step, everything above succeeded.
+      - name: Success - no action needed
+        if: ${{ success() }}
+        run: echo "✅ Build and publish succeeded."
+
+      # If any of the above steps fail, this step will run and open an issue.
+      - name: Create issue on failure
+        if: ${{ failure() }}
+        uses: peter-evans/create-issue@v4
+        with:
+          title: "🚨 PyPI Publish Failed on main"
+          body: |
+            **Repository:** ${{ github.repository }}
+            **Ref:** ${{ github.ref }}
+            **Commit:** ${{ github.sha }}
+            **Workflow:** ${{ github.workflow }}
+            **Run ID:** ${{ github.run_id }}
+
+            One or more steps failed during the “Publish to PyPI” workflow. Please investigate:
+            1. Check the logs for the step that failed.
+            2. Fix any build/test/publishing errors.
+            3. Push a new commit to `main` to retry.
+
+          labels: |
+            bug
+            pypi-failure
