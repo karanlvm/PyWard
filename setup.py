@@ -5,7 +5,7 @@ HERE = pathlib.Path(__file__).parent
 README = (HERE / "README.md").read_text(encoding="utf-8")
 
 setup(
-    name="pyward",
+    name="pyward-cli",
     version="0.1.0",  # bump this if you’ve already released 0.1.0
     description="CLI linter for Python (optimization + security checks)",
     long_description=README,
