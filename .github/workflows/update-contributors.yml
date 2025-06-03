@@ -11,18 +11,20 @@ on:
 jobs:
   add-contributors:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write # Grant write access so the workflow can update README.md
     steps:
     - name: Checkout repository
-      uses: actions/checkout@v4 # Using v4 for latest security and features
+      uses: actions/checkout@v4 # Uses the latest version of the checkout action
       
     - name: Add Contributors to README.md
-      uses: BobAnkh/add-contributors@master # Using the master branch for the action
+      uses: BobAnkh/add-contributors@master # The action to add contributors
       with:
-        CONTRIBUTOR: '### Contributors' # The heading to look for in your README.md
-        COLUMN_PER_ROW: '6'
-        ACCESS_TOKEN: ${{ secrets.GITHUB_TOKEN }} # GitHub's built-in token for authentication
-        IMG_WIDTH: '100'
-        FONT_SIZE: '14'
-        PATH: 'README.md' # Path to your README.md
-        COMMIT_MESSAGE: 'docs(README): update contributors [skip ci]' # Commit message, [skip ci] prevents infinite loops
-        AVATAR_SHAPE: 'round'
+        CONTRIBUTOR: '### Contributors' # The exact heading the action will look for in your README.md
+        COLUMN_PER_ROW: '6' # Number of contributor avatars per row
+        ACCESS_TOKEN: ${{ secrets.GITHUB_TOKEN }} # Automatically provided token for authentication
+        IMG_WIDTH: '100' # Width of the contributor avatar images
+        FONT_SIZE: '14' # Font size for contributor names
+        PATH: 'README.md' # The file where the contributors list will be inserted
+        COMMIT_MESSAGE: 'docs(README): update contributors [skip ci]' # The commit message for the update, [skip ci] prevents re-triggering other workflows
+        AVATAR_SHAPE: 'round' # Shape of the contributor avatars
