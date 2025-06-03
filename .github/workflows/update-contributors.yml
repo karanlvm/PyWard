@@ -1,42 +1,23 @@
-name: Update Contributors
-
+name: Add contributors
 on:
-  push:
-    branches:
-      - main # Trigger on pushes to the main branch
-  workflow_dispatch: # Allows manual triggering of the workflow
+  schedule:
+    - cron:  '20 20 * * *'
+# push:
+#   branches:
+#     - master
 
 jobs:
-  update-contributors:
+  add-contributors:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Add Contributors to CONTRIBUTORS.md
-        uses: BobAnkh/add-contributors@v2.3.10 # Use the latest version if available
-        with:
-          # The path to your contributors file. Default is README.md
-          PATH: 'CONTRIBUTORS.md' 
-          # The section in your CONTRIBUTORS.md where the list should be inserted.
-          # Make sure these comments exist in your CONTRIBUTORS.md file.
-          CONTRIBUTOR: '\n'
-          # Your GitHub Token. GITHUB_TOKEN is automatically provided by GitHub Actions.
-          ACCESS_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          # Optional: Number of contributors per row (adjust as needed for your file)
-          COLUMN_PER_ROW: '6' 
-          # Optional: Width of the avatar images
-          IMG_WIDTH: '100'
-          # Optional: Branch to update the file. Defaults to the current branch.
-          # If you want it to create a PR instead, you can specify a branch name here
-          # and it will create a PR to that branch. Otherwise, it commits directly.
-          # BRANCH: 'update-contributors-pr' 
-
-      - name: Commit changes
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add CONTRIBUTORS.md
-          git diff --cached --exit-code || git commit -m "chore: update contributors in CONTRIBUTORS.md [skip ci]"
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    - uses: actions/checkout@v2
+    - uses: BobAnkh/add-contributors@master
+      with:
+        CONTRIBUTOR: '### Contributors'
+        COLUMN_PER_ROW: '6'
+        ACCESS_TOKEN: ${{secrets.GITHUB_TOKEN}}
+        IMG_WIDTH: '100'
+        FONT_SIZE: '14'
+        PATH: '/README.md'
+        COMMIT_MESSAGE: 'docs(README): update contributors'
+        AVATAR_SHAPE: 'round'
