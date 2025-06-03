@@ -1,23 +1,28 @@
 name: Add contributors
+
 on:
   schedule:
-    - cron:  '20 20 * * *'
-# push:
-#   branches:
-#     - master
+    - cron: '20 20 * * *' # Runs daily at 8:20 PM UTC
+  push:
+    branches:
+      - main # Trigger on pushes to your 'main' branch
+  workflow_dispatch: # Allows you to manually trigger the workflow
 
 jobs:
   add-contributors:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v2
-    - uses: BobAnkh/add-contributors@master
+    - name: Checkout repository
+      uses: actions/checkout@v4 # Using v4 for latest security and features
+      
+    - name: Add Contributors to README.md
+      uses: BobAnkh/add-contributors@master # Using the master branch for the action
       with:
-        CONTRIBUTOR: '### Contributors'
+        CONTRIBUTOR: '### Contributors' # The heading to look for in your README.md
         COLUMN_PER_ROW: '6'
-        ACCESS_TOKEN: ${{secrets.GITHUB_TOKEN}}
+        ACCESS_TOKEN: ${{ secrets.GITHUB_TOKEN }} # GitHub's built-in token for authentication
         IMG_WIDTH: '100'
         FONT_SIZE: '14'
-        PATH: '/README.md'
-        COMMIT_MESSAGE: 'docs(README): update contributors'
+        PATH: 'README.md' # Path to your README.md
+        COMMIT_MESSAGE: 'docs(README): update contributors [skip ci]' # Commit message, [skip ci] prevents infinite loops
         AVATAR_SHAPE: 'round'
