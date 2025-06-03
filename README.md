@@ -91,3 +91,22 @@ Please adhere to the project’s coding style and include meaningful commit mess
 This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for details.
 
 ### Contributors
+
+<table>
+<tr>
+    <td align="center" style="word-wrap: break-word; width: 150.0; height: 150.0">
+        <a href=https://github.com/karanlvm>
+            <img src=https://avatars.githubusercontent.com/u/69917470?v=4 width="100;"  style="border-radius:50%;align-items:center;justify-content:center;overflow:hidden;padding-top:10px" alt=Karan Vasudevamurthy/>
+            <br />
+            <sub style="font-size:14px"><b>Karan Vasudevamurthy</b></sub>
+        </a>
+    </td>
+    <td align="center" style="word-wrap: break-word; width: 150.0; height: 150.0">
+        <a href=https://github.com/aideng18>
+            <img src=https://avatars.githubusercontent.com/u/214614554?v=4 width="100;"  style="border-radius:50%;align-items:center;justify-content:center;overflow:hidden;padding-top:10px" alt=aideng18/>
+            <br />
+            <sub style="font-size:14px"><b>aideng18</b></sub>
+        </a>
+    </td>
+</tr>
+</table>
