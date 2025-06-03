@@ -2,28 +2,330 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>PyWard | Python Linter</title>
+  <title>PyWard | Python Security & Optimization Linter</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="PyWard - A powerful command-line linter for secure and optimized Python code. Catch security vulnerabilities and optimization issues before they break things.">
   <link rel="stylesheet" href="style.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
   <script defer src="https://cdn.jsdelivr.net/npm/gsap@3.12.2/dist/gsap.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/gsap@3.12.2/dist/ScrollTrigger.min.js"></script>
   <script defer src="script.js"></script>
 </head>
 <body>
-  <header>
-    <h1>🛡️ PyWard</h1>
-    <p>A powerful linter for secure & optimized Python code</p>
-    <p class="typewriter">&lt;Find bugs before they break things /&gt;</p>
-    <a href="https://github.com/karanlvm/pyward" class="button">View on GitHub</a>
+  <!-- Navigation -->
+  <nav class="navbar">
+    <div class="nav-container">
+      <div class="nav-logo">
+        <span class="shield">🛡️</span>
+        <span class="logo-text">PyWard</span>
+      </div>
+      <div class="nav-links">
+        <a href="#features">Features</a>
+        <a href="#installation">Install</a>
+        <a href="#usage">Usage</a>
+        <a href="#contribute">Contribute</a>
+      </div>
+    </div>
+  </nav>
+
+  <!-- Hero Section -->
+  <header class="hero">
+    <div class="hero-container">
+      <div class="hero-content">
+        <div class="hero-badge">
+          <span>🚀 Now available on PyPI</span>
+        </div>
+        <h1 class="hero-title">
+          <span class="gradient-text">PyWard</span>
+          <br>Python Security & Optimization Linter
+        </h1>
+        <p class="hero-subtitle">
+          Catch security vulnerabilities and optimization issues in your Python code before they break things in production.
+        </p>
+        <div class="typewriter-container">
+          <span class="typewriter-prefix">$</span>
+          <span class="typewriter" data-text="pip install pyward-cli"></span>
+          <span class="cursor">|</span>
+        </div>
+        <div class="hero-buttons">
+          <a href="#installation" class="button primary">Get Started</a>
+          <a href="https://github.com/karanlvm/pyward" class="button secondary">
+            <span class="github-icon">⭐</span>
+            View on GitHub
+          </a>
+        </div>
+      </div>
+      <div class="hero-visual">
+        <div class="code-window">
+          <div class="window-header">
+            <div class="window-controls">
+              <span class="control red"></span>
+              <span class="control yellow"></span>
+              <span class="control green"></span>
+            </div>
+            <span class="window-title">terminal</span>
+          </div>
+          <div class="code-content">
+            <div class="code-line">
+              <span class="prompt">$</span>
+              <span class="command">pyward my_script.py</span>
+            </div>
+            <div class="code-line output">
+              <span class="warning">⚠️  Security Issue: eval() detected (line 15)</span>
+            </div>
+            <div class="code-line output">
+              <span class="info">💡 Optimization: Unused import 'os' (line 3)</span>
+            </div>
+            <div class="code-line output">
+              <span class="success">✅ 2 issues found and fixed!</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
   </header>
 
-  <section class="features">
-    <div class="feature">🔒 Security checks (e.g. <code>eval</code>, <code>exec</code>, weak hashes)</div>
-    <div class="feature">⚙️ Optimization checks (unused vars, unreachable code)</div>
-    <div class="feature">📦 Easy to install: <code>pip install pyward-cli</code></div>
+  <!-- Features Section -->
+  <section id="features" class="features-section">
+    <div class="container">
+      <div class="section-header">
+        <h2>Why Choose PyWard?</h2>
+        <p>Comprehensive code analysis for modern Python development</p>
+      </div>
+      
+      <div class="features-grid">
+        <div class="feature-card security">
+          <div class="feature-icon">🔒</div>
+          <h3>Security Checks</h3>
+          <p>Detect dangerous patterns and known vulnerabilities</p>
+          <ul class="feature-list">
+            <li>Unsafe <code>eval()</code> and <code>exec()</code> usage</li>
+            <li>Weak cryptographic hashes</li>
+            <li>Known CVE patterns</li>
+            <li>Vulnerable package imports</li>
+          </ul>
+        </div>
+        
+        <div class="feature-card optimization">
+          <div class="feature-icon">⚡</div>
+          <h3>Optimization Checks</h3>
+          <p>Improve code quality and performance</p>
+          <ul class="feature-list">
+            <li>Unused imports detection</li>
+            <li>Unreachable code blocks</li>
+            <li>Dead variable assignments</li>
+            <li>Performance anti-patterns</li>
+          </ul>
+        </div>
+        
+        <div class="feature-card developer">
+          <div class="feature-icon">🛠️</div>
+          <h3>Developer Friendly</h3>
+          <p>Built for modern development workflows</p>
+          <ul class="feature-list">
+            <li>Simple CLI interface</li>
+            <li>Flexible check modes</li>
+            <li>Verbose output options</li>
+            <li>CI/CD integration ready</li>
+          </ul>
+        </div>
+      </div>
+    </div>
   </section>
 
-  <footer>
-    Built with ❤️ by <a href="https://karanlvm.info">Karan Vasudevamurthy</a>
+  <!-- Installation Section -->
+  <section id="installation" class="installation-section">
+    <div class="container">
+      <div class="section-header">
+        <h2>Quick Installation</h2>
+        <p>Get PyWard running in seconds</p>
+      </div>
+      
+      <div class="install-steps">
+        <div class="step">
+          <div class="step-number">1</div>
+          <div class="step-content">
+            <h3>Install via pip</h3>
+            <div class="code-block">
+              <div class="code-header">
+                <span>Terminal</span>
+                <button class="copy-btn" data-copy="pip install pyward-cli">Copy</button>
+              </div>
+              <code>pip install pyward-cli</code>
+            </div>
+            <p class="step-note">Requires Python 3.7 or newer</p>
+          </div>
+        </div>
+        
+        <div class="step">
+          <div class="step-number">2</div>
+          <div class="step-content">
+            <h3>Run your first check</h3>
+            <div class="code-block">
+              <div class="code-header">
+                <span>Terminal</span>
+                <button class="copy-btn" data-copy="pyward your_script.py">Copy</button>
+              </div>
+              <code>pyward your_script.py</code>
+            </div>
+            <p class="step-note">Runs both security and optimization checks</p>
+          </div>
+        </div>
+        
+        <div class="step">
+          <div class="step-number">3</div>
+          <div class="step-content">
+            <h3>Customize your workflow</h3>
+            <div class="code-block">
+              <div class="code-header">
+                <span>Terminal</span>
+                <button class="copy-btn" data-copy="pyward -s -v your_script.py">Copy</button>
+              </div>
+              <code>pyward -s -v your_script.py</code>
+            </div>
+            <p class="step-note">Security-only checks with verbose output</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Usage Examples Section -->
+  <section id="usage" class="usage-section">
+    <div class="container">
+      <div class="section-header">
+        <h2>Usage Examples</h2>
+        <p>See PyWard in action with real-world scenarios</p>
+      </div>
+      
+      <div class="usage-grid">
+        <div class="usage-card">
+          <h3>🔍 All Checks</h3>
+          <div class="code-block">
+            <code>pyward demo.py</code>
+          </div>
+          <p>Run comprehensive security and optimization analysis</p>
+        </div>
+        
+        <div class="usage-card">
+          <h3>🔒 Security Only</h3>
+          <div class="code-block">
+            <code>pyward -s demo.py</code>
+          </div>
+          <p>Focus on security vulnerabilities and CVE patterns</p>
+        </div>
+        
+        <div class="usage-card">
+          <h3>⚡ Optimization Only</h3>
+          <div class="code-block">
+            <code>pyward -o demo.py</code>
+          </div>
+          <p>Check for performance issues and code quality</p>
+        </div>
+        
+        <div class="usage-card">
+          <h3>📝 Verbose Mode</h3>
+          <div class="code-block">
+            <code>pyward -v demo.py</code>
+          </div>
+          <p>Get detailed explanations and suggestions</p>
+        </div>
+      </div>
+      
+      <div class="cli-options">
+        <h3>Command Line Options</h3>
+        <div class="options-grid">
+          <div class="option">
+            <code>-s, --security</code>
+            <span>Run only security checks</span>
+          </div>
+          <div class="option">
+            <code>-o, --optimize</code>
+            <span>Run only optimization checks</span>
+          </div>
+          <div class="option">
+            <code>-v, --verbose</code>
+            <span>Show detailed output</span>
+          </div>
+          <div class="option">
+            <code>-h, --help</code>
+            <span>Display help information</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Contribute Section -->
+  <section id="contribute" class="contribute-section">
+    <div class="container">
+      <div class="contribute-content">
+        <div class="contribute-text">
+          <h2>Help Make PyWard Better</h2>
+          <p>PyWard is open source and welcomes contributions from the community. Whether you want to add new rules, fix bugs, or improve documentation, we'd love your help!</p>
+          <div class="contribute-stats">
+            <div class="stat">
+              <span class="stat-number">MIT</span>
+              <span class="stat-label">License</span>
+            </div>
+            <div class="stat">
+              <span class="stat-number">Python 3.7+</span>
+              <span class="stat-label">Compatibility</span>
+            </div>
+            <div class="stat">
+              <span class="stat-number">Active</span>
+              <span class="stat-label">Development</span>
+            </div>
+          </div>
+        </div>
+        <div class="contribute-actions">
+          <a href="https://github.com/karanlvm/pyward/issues" class="button primary">
+            🐛 Report Issues
+          </a>
+          <a href="https://github.com/karanlvm/pyward/fork" class="button secondary">
+            🍴 Fork Repository
+          </a>
+          <a href="https://github.com/karanlvm/pyward/pulls" class="button secondary">
+            🔄 Submit PR
+          </a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Footer -->
+  <footer class="footer">
+    <div class="container">
+      <div class="footer-content">
+        <div class="footer-left">
+          <div class="footer-logo">
+            <span class="shield">🛡️</span>
+            <span>PyWard</span>
+          </div>
+          <p>Secure and optimized Python code, one check at a time.</p>
+        </div>
+        <div class="footer-links">
+          <div class="link-group">
+            <h4>Product</h4>
+            <a href="#features">Features</a>
+            <a href="#installation">Installation</a>
+            <a href="#usage">Usage</a>
+          </div>
+          <div class="link-group">
+            <h4>Community</h4>
+            <a href="https://github.com/karanlvm/pyward">GitHub</a>
+            <a href="https://github.com/karanlvm/pyward/issues">Issues</a>
+            <a href="#contribute">Contribute</a>
+          </div>
+        </div>
+      </div>
+      <div class="footer-bottom">
+        <p>Built with ❤️ by <a href="https://karanlvm.info">Karan Vasudevamurthy</a></p>
+        <p>© 2024 PyWard. Licensed under MIT.</p>
+      </div>
+    </div>
   </footer>
 </body>
 </html>
