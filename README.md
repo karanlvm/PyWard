@@ -90,6 +90,4 @@ Please adhere to the project’s coding style and include meaningful commit mess
 
 This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for details.
 
-## Acknowledgments
-
-- Inspired by security best practices and popular linters in the Python ecosystem.
+### Contributors
