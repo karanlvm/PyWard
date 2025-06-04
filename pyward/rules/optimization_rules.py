@@ -1,5 +1,6 @@
 import ast
 from typing import List, Set, Tuple, Dict
+from pyward.format.formatter import format_optimization_warning
 
 
 def check_unused_imports(tree: ast.AST) -> List[str]:
@@ -40,7 +41,7 @@ def check_unused_imports(tree: ast.AST) -> List[str]:
     for name, lineno in import_nodes:
         if name in unused:
             issues.append(
-                f"[Optimization] Line {lineno}: Imported name '{name}' is never used."
+                format_optimization_warning(f"Imported name '{name}' is never used.", lineno)
             )
 
     return issues
@@ -65,7 +66,7 @@ def check_unreachable_code(tree: ast.AST) -> List[str]:
         for node in body:
             if unreachable:
                 issues.append(
-                    f"[Optimization] Line {node.lineno}: This code is unreachable."
+                    format_optimization_warning("This code is unreachable.", node.lineno)
                 )
                 continue
 
@@ -133,16 +134,22 @@ def check_string_concat_in_loop(tree: ast.AST) -> List[str]:
                     left = value.left
                     if isinstance(left, ast.Name) and left.id == target:
                         issues.append(
-                            f"[Optimization] Line {node.lineno}: String concatenation in loop for '{target}'. "
-                            "Consider using ''.join() or appending to a list and joining outside the loop."
+                            format_optimization_warning(
+                                f"String concatenation in loop for '{target}'. "
+                                "Consider using ''.join() or appending to a list and joining outside the loop.",
+                                node.lineno
+                            )
                         )
             self.generic_visit(node)
 
         def visit_AugAssign(self, node: ast.AugAssign):
             if self.in_loop and isinstance(node.op, ast.Add) and isinstance(node.target, ast.Name):
                 issues.append(
-                    f"[Optimization] Line {node.lineno}: Augmented assignment '{node.target.id} += ...' in loop. "
-                    "Consider using ''.join() or appending to a list and joining outside the loop."
+                    format_optimization_warning(
+                        f"Augmented assignment '{node.target.id} += ...' in loop. "
+                        "Consider using ''.join() or appending to a list and joining outside the loop.",
+                        node.lineno
+                    )
                 )
             self.generic_visit(node)
 
@@ -176,8 +183,11 @@ def check_len_call_in_loop(tree: ast.AST) -> List[str]:
         def visit_Call(self, node: ast.Call):
             if self.in_loop and isinstance(node.func, ast.Name) and node.func.id == "len":
                 issues.append(
-                    f"[Optimization] Line {node.lineno}: Call to len() inside loop. "
-                    "Consider storing the length in a variable before the loop."
+                    format_optimization_warning(
+                        "Call to len() inside loop. "
+                        "Consider storing the length in a variable before the loop.",
+                        node.lineno
+                    )
                 )
             self.generic_visit(node)
 
@@ -204,8 +214,11 @@ def check_range_len_pattern(tree: ast.AST) -> List[str]:
                     inner = args[0]
                     if isinstance(inner.func, ast.Name) and inner.func.id == "len":
                         issues.append(
-                            f"[Optimization] Line {node.lineno}: Loop over 'range(len(...))'. "
-                            "Consider using 'enumerate()' to iterate directly over the sequence."
+                            format_optimization_warning(
+                                "Loop over 'range(len(...))'. "
+                                "Consider using 'enumerate()' to iterate directly over the sequence.",
+                                node.lineno
+                            )
                         )
     return issues
 
@@ -239,8 +252,11 @@ def check_append_in_loop(tree: ast.AST) -> List[str]:
                 and node.func.attr == "append"
             ):
                 issues.append(
-                    f"[Optimization] Line {node.lineno}: Using list.append() inside a loop. "
-                    "Consider using a list comprehension for better performance."
+                    format_optimization_warning(
+                        "Using list.append() inside a loop. "
+                        "Consider using a list comprehension for better performance.",
+                        node.lineno
+                    )
                 )
             self.generic_visit(node)
 
@@ -313,7 +329,10 @@ def check_unused_variables(tree: ast.AST) -> List[str]:
     for name, lineno in assigned_names.items():
         if name not in used_names and not name.startswith("_"):
             issues.append(
-                f"[Optimization] Line {lineno}: Variable '{name}' is assigned but never used."
+                format_optimization_warning(
+                    f"Variable '{name}' is assigned but never used.",
+                    lineno
+                )
             )
 
     return issues
