@@ -14,7 +14,6 @@ from pyward.rules.optimization_rules import (
 )
 
 OPTIMIZATION_COLOR = Fore.YELLOW
-SECURITY_COLOR = Fore.RED
 OPTIMIZATION_LABEL = f"{OPTIMIZATION_COLOR}[Optimization]{Fore.RESET}"
 
 
