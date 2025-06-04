@@ -85,7 +85,7 @@ Contributions are welcome! To add new rules or improve existing ones:
 4. Open a pull request detailing your enhancements.
 
 Please adhere to the project’s coding style and include meaningful commit messages.
-For more details on the contributing process, see the [CONTRIBUTING](CONTRIBUTING)
+For more details on the contributing process, see the [CONTRIBUTING](CONTRIBUTING.md)
 ## License
 
 This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for details.
