@@ -51,7 +51,7 @@ def check_python_json_logger_import(tree: ast.AST) -> List[str]:
                         format_security_warning(
                             "'python_json_logger' import detected. This package was vulnerable to RCE "
                             "between Dec 30, 2024 and Mar 4, 2025 (CVE-2025-27607). "
-                            "Update to a patched version or remove this dependency.", 
+                            "Update to a patched version or remove this dependency.",
                             node.lineno, "CVE-2025-27607"
                         )
                     )
