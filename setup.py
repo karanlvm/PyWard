@@ -6,7 +6,7 @@ README = (HERE / "README.md").read_text(encoding="utf-8")
 
 setup(
     name="pyward-cli",
-    version="0.1.0",  # bump this if you’ve already released 0.1.0
+    version="0.1.1",
     description="CLI linter for Python (optimization + security checks)",
     long_description=README,
     long_description_content_type="text/markdown",
