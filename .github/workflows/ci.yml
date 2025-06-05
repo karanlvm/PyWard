@@ -12,9 +12,10 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v3
 
-      - name: Set up Python 3.10.14
+      - name: Set up Python 3.10
         uses: actions/setup-python@v4
-        with: python-version: '3.10.14'
+        with:
+          python-version: "3.10"
 
       - name: Install dependencies
         run: |
@@ -31,6 +32,14 @@ jobs:
           echo "report<<EOF" >> "$GITHUB_OUTPUT"
           cat pytest_output.txt >> "$GITHUB_OUTPUT"
           echo "EOF" >> "$GITHUB_OUTPUT"
+
+      - name: Add “ready for review” label
+        if: ${{ steps.run-tests.conclusion == 'success' }}
+        uses: actions-ecosystem/action-add-labels@v1
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          labels: |
+            ready for review
 
       - name: Comment test & coverage results on PR
         if: always()
