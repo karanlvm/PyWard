@@ -393,8 +393,11 @@ def check_dict_comprehension(tree: ast.AST) -> List[str]:
                 if isinstance(target, ast.Subscript) and isinstance(target.value, ast.Name):
                     dict_name = target.value.id
                     issues.append(
-                        f"[Optimization] Line {node.lineno}: Building dict '{dict_name}' via loop assignment. "
-                        "Consider using a dict comprehension."
+                        format_optimization_warning(
+                            f"Building dict '{dict_name}' via loop assignment. "
+                            "Consider using a dict comprehension.",
+                            node.lineno
+                        )
                     )
             self.generic_visit(node)
 
@@ -438,8 +441,11 @@ def check_set_comprehension(tree: ast.AST) -> List[str]:
             ):
                 set_name = node.func.value.id
                 issues.append(
-                    f"[Optimization] Line {node.lineno}: Building set '{set_name}' via add() in a loop. "
-                    "Consider using a set comprehension."
+                    format_optimization_warning(
+                        f"Building set '{set_name}' via add() in a loop. "
+                        "Consider using a set comprehension.",
+                        node.lineno
+                    )
                 )
             self.generic_visit(node)
 
@@ -465,8 +471,11 @@ def check_genexpr_vs_list(tree: ast.AST) -> List[str]:
                     if isinstance(first_arg, ast.ListComp):
                         func_name = node.func.id
                         issues.append(
-                            f"[Optimization] Line {node.lineno}: {func_name}() applied to a list comprehension. "
-                            "Consider using a generator expression (remove the brackets) for better memory efficiency."
+                            format_optimization_warning(
+                                f"{func_name}() applied to a list comprehension. "
+                                "Consider using a generator expression (remove the brackets) for better memory efficiency.",
+                                node.lineno
+                            )
                         )
             self.generic_visit(node)
 
@@ -507,8 +516,11 @@ def check_membership_on_list_in_loop(tree: ast.AST) -> List[str]:
                             if isinstance(comp, ast.Name):
                                 list_name = comp.id
                                 issues.append(
-                                    f"[Optimization] Line {node.lineno}: Membership test '{ast.unparse(node)}' inside a loop. "
-                                    f"If '{list_name}' is a large list, consider converting it to a set for faster lookups."
+                                    format_optimization_warning(
+                                        f"Membership test '{ast.unparse(node)}' inside a loop. "
+                                        f"If '{list_name}' is a large list, consider converting it to a set for faster lookups.",
+                                        node.lineno
+                                    )
                                 )
             self.generic_visit(node)
 
@@ -542,8 +554,11 @@ def check_open_without_context(tree: ast.AST) -> List[str]:
         def visit_Call(self, node: ast.Call):
             if isinstance(node.func, ast.Name) and node.func.id == "open" and not self.in_with:
                 issues.append(
-                    f"[Optimization] Line {node.lineno}: Use of open() outside of a 'with' context manager. "
-                    "Consider using 'with open(...) as f:' for better resource management."
+                    format_optimization_warning(
+                        "Use of open() outside of a 'with' context manager. "
+                        "Consider using 'with open(...) as f:' for better resource management.",
+                        node.lineno
+                    )
                 )
             self.generic_visit(node)
 

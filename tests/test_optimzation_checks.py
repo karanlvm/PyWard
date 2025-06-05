@@ -206,7 +206,7 @@ def test_check_dict_comprehension_detected():
     tree = ast.parse(source)
     issues = check_dict_comprehension(tree)
     assert issues == [
-        "[Optimization] Line 3: Building dict 'd' via loop assignment. Consider using a dict comprehension."
+        f"{OPTIMIZATION_LABEL} Line 3: Building dict 'd' via loop assignment. Consider using a dict comprehension."
     ]
 
 
@@ -219,7 +219,7 @@ def test_check_set_comprehension_detected():
     tree = ast.parse(source)
     issues = check_set_comprehension(tree)
     assert issues == [
-        "[Optimization] Line 3: Building set 's' via add() in a loop. Consider using a set comprehension."
+        f"{OPTIMIZATION_LABEL} Line 3: Building set 's' via add() in a loop. Consider using a set comprehension."
     ]
 
 
@@ -231,7 +231,7 @@ def test_check_genexpr_vs_list_detected():
     tree = ast.parse(source)
     issues = check_genexpr_vs_list(tree)
     assert issues == [
-        "[Optimization] Line 2: sum() applied to a list comprehension. Consider using a generator expression (remove the brackets) for better memory efficiency."
+        f"{OPTIMIZATION_LABEL} Line 2: sum() applied to a list comprehension. Consider using a generator expression (remove the brackets) for better memory efficiency."
     ]
 
 
@@ -245,7 +245,7 @@ def test_check_membership_on_list_in_loop_detected():
     tree = ast.parse(source)
     issues = check_membership_on_list_in_loop(tree)
     assert issues == [
-        "[Optimization] Line 3: Membership test 'x in lst' inside a loop. If 'lst' is a large list, consider converting it to a set for faster lookups."
+        f"{OPTIMIZATION_LABEL} Line 3: Membership test 'x in lst' inside a loop. If 'lst' is a large list, consider converting it to a set for faster lookups."
     ]
 
 
@@ -258,7 +258,7 @@ def test_check_open_without_context_detected():
     tree = ast.parse(source)
     issues = check_open_without_context(tree)
     assert issues == [
-        "[Optimization] Line 1: Use of open() outside of a 'with' context manager. Consider using 'with open(...) as f:' for better resource management."
+        f"{OPTIMIZATION_LABEL} Line 1: Use of open() outside of a 'with' context manager. Consider using 'with open(...) as f:' for better resource management."
     ]
 
 
