@@ -1,6 +1,6 @@
 import ast
 import pytest
-from colorama import Fore
+from colorama import Fore, Back, Style
 
 from pyward.rules.optimization_rules import (
     check_unused_imports,
@@ -18,8 +18,8 @@ from pyward.rules.optimization_rules import (
     run_all_optimization_checks,
 )
 
-OPTIMIZATION_COLOR = Fore.YELLOW
-OPTIMIZATION_LABEL = f"{OPTIMIZATION_COLOR}[Optimization]{Fore.RESET}"
+OPTIMIZATION_COLOR = f"{Fore.WHITE}{Back.YELLOW}"
+OPTIMIZATION_LABEL = f"{OPTIMIZATION_COLOR}[Optimization]{Style.RESET_ALL}"
 
 
 def test_check_unused_imports_single_unused():
