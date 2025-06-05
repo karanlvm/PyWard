@@ -1,0 +1,72 @@
+name: CI / Pytest and PR Comment
+
+# Run this workflow on all pull requests
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+# Grant permissions for the workflow to read content and write comments to the PR
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  test-and-comment:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.10
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.10"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install pytest pytest-cov colorama
+
+      - name: Run pytest and capture output
+        id: pytest # Give this step an ID to refer to its outcome later
+        # Use continue-on-error so the workflow doesn't stop if tests fail.
+        # This allows the commenting step to always run.
+        continue-on-error: true
+        run: |
+          # The output is piped to a file. Pytest's exit code determines the step's outcome.
+          pytest --cov=./ --cov-report=term-missing > pytest_output.txt
+
+      - name: Comment test results on PR
+        # This step will always run, even if the previous step failed
+        if: always()
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            // Using the 'fs' module to read the output file
+            const fs = require('fs');
+            const output = fs.readFileSync('pytest_output.txt', 'utf8');
+
+            // Check the outcome of the pytest step
+            const testOutcome = '${{ steps.pytest.outcome }}';
+            const statusEmoji = testOutcome === 'success' ? '✅' : '❌';
+            const statusTitle = testOutcome === 'success' ? 'All tests passed' : 'Some tests failed';
+
+            const body = [
+              `### ${statusEmoji} Pytest Results: ${statusTitle}`,
+              "",
+              "<details><summary>Click to see full test and coverage report</summary>",
+              "",
+              "```term",
+              output,
+              "```",
+              "</details>"
+            ].join("\n");
+
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              body: body
+            });
