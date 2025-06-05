@@ -10,6 +10,11 @@ from pyward.rules.optimization_rules import (
     check_range_len_pattern,
     check_append_in_loop,
     check_unused_variables,
+    check_dict_comprehension,
+    check_set_comprehension,
+    check_genexpr_vs_list,
+    check_membership_on_list_in_loop,
+    check_open_without_context,
     run_all_optimization_checks,
 )
 
@@ -192,6 +197,71 @@ def test_check_unused_variables_ignores_underscore():
     ]
 
 
+def test_check_dict_comprehension_detected():
+    source = (
+        "d = {}\n"
+        "for k, v in [('a', 1), ('b', 2)]:\n"
+        "    d[k] = v * 2\n"
+    )
+    tree = ast.parse(source)
+    issues = check_dict_comprehension(tree)
+    assert issues == [
+        "[Optimization] Line 3: Building dict 'd' via loop assignment. Consider using a dict comprehension."
+    ]
+
+
+def test_check_set_comprehension_detected():
+    source = (
+        "s = set()\n"
+        "for x in [1, 2, 3]:\n"
+        "    s.add(x)\n"
+    )
+    tree = ast.parse(source)
+    issues = check_set_comprehension(tree)
+    assert issues == [
+        "[Optimization] Line 3: Building set 's' via add() in a loop. Consider using a set comprehension."
+    ]
+
+
+def test_check_genexpr_vs_list_detected():
+    source = (
+        "data = [1, 2, 3]\n"
+        "total = sum([x * 2 for x in data])\n"
+    )
+    tree = ast.parse(source)
+    issues = check_genexpr_vs_list(tree)
+    assert issues == [
+        "[Optimization] Line 2: sum() applied to a list comprehension. Consider using a generator expression (remove the brackets) for better memory efficiency."
+    ]
+
+
+def test_check_membership_on_list_in_loop_detected():
+    source = (
+        "lst = [1, 2, 3]\n"
+        "for x in [4, 5, 1]:\n"
+        "    if x in lst:\n"
+        "        pass\n"
+    )
+    tree = ast.parse(source)
+    issues = check_membership_on_list_in_loop(tree)
+    assert issues == [
+        "[Optimization] Line 3: Membership test 'x in lst' inside a loop. If 'lst' is a large list, consider converting it to a set for faster lookups."
+    ]
+
+
+def test_check_open_without_context_detected():
+    source = (
+        "f = open('file.txt', 'r')\n"
+        "data = f.read()\n"
+        "f.close()\n"
+    )
+    tree = ast.parse(source)
+    issues = check_open_without_context(tree)
+    assert issues == [
+        "[Optimization] Line 1: Use of open() outside of a 'with' context manager. Consider using 'with open(...) as f:' for better resource management."
+    ]
+
+
 def test_run_all_optimization_checks_combined():
     source = (
         "import os\n"
@@ -206,11 +276,21 @@ def test_run_all_optimization_checks_combined():
         "    s = s + 'a'\n"
         "    lst = []\n"
         "    lst.append(i)\n"
+        "d = {}\n"
+        "for k, v in [('a', 1)]:\n"
+        "    d[k] = v\n"
+        "s2 = set()\n"
+        "for x in [1, 2]:\n"
+        "    s2.add(x)\n"
+        "total = sum([x for x in [1, 2, 3]])\n"
+        "lst2 = [1, 2, 3]\n"
+        "for x in [1, 4]:\n"
+        "    if x in lst2:\n"
+        "        pass\n"
+        "f = open('file.txt')\n"
     )
     issues = run_all_optimization_checks(source)
 
-    # Expect at least: unused import 'sys', unused variable 'y', unreachable 'z',
-    # range(len(...)), string concat, append in loop
     expected_substrings = [
         "Imported name 'sys' is never used",
         "Variable 'y' is assigned but never used",
@@ -218,6 +298,11 @@ def test_run_all_optimization_checks_combined():
         "Loop over 'range(len(...))'",
         "String concatenation in loop for 's'",
         "Using list.append() inside a loop",
+        "Building dict 'd' via loop assignment",
+        "Building set 's2' via add() in a loop",
+        "sum() applied to a list comprehension",
+        "Membership test 'x in lst2' inside a loop",
+        "Use of open() outside of a 'with' context manager",
     ]
     for substring in expected_substrings:
         assert any(substring in msg for msg in issues), f"Missing issue containing: {substring}"

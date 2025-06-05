@@ -68,12 +68,30 @@ def check_unreachable_code(tree: ast.AST) -> List[str]:
                 issues.append(
                     format_optimization_warning("This code is unreachable.", node.lineno)
                 )
+                # Continue scanning to catch nested unreachable statements
+                if isinstance(node, (ast.If, ast.For, ast.While, ast.Try, ast.With, ast.AsyncWith)):
+                    _nested: List[ast.AST] = []
+                    if isinstance(node, ast.If):
+                        _nested.extend(node.body + node.orelse)
+                    elif isinstance(node, (ast.For, ast.While)):
+                        _nested.extend(node.body + node.orelse)
+                    elif isinstance(node, ast.Try):
+                        _nested.extend(node.body)
+                        for handler in node.handlers:
+                            _nested.extend(handler.body)
+                        _nested.extend(node.orelse + node.finalbody)
+                    elif isinstance(node, (ast.With, ast.AsyncWith)):
+                        _nested.extend(node.body)
+                    for n in _nested:
+                        issues.append(
+                            f"[Optimization] Line {n.lineno}: This code is unreachable."
+                        )
                 continue
 
             if isinstance(node, (ast.Return, ast.Raise, ast.Break, ast.Continue)):
                 unreachable = True
 
-            # Dive into compound statements
+            # Dive into compound statements for nested unreachable checks
             if isinstance(node, ast.If):
                 _check_body(node.body)
                 _check_body(node.orelse)
@@ -87,12 +105,12 @@ def check_unreachable_code(tree: ast.AST) -> List[str]:
                 _check_body(node.orelse)
                 _check_body(node.finalbody)
             elif isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
-                # Don't drill into nested function definitions here; they have their own scope.
+                # Don’t drill into nested function definitions here; they have their own scope.
                 pass
             elif isinstance(node, (ast.With, ast.AsyncWith)):
                 _check_body(node.body)
 
-    # Check module‐level code
+    # Check module-level code
     _check_body(tree.body)
 
     # Also check inside each function definition
@@ -338,13 +356,227 @@ def check_unused_variables(tree: ast.AST) -> List[str]:
     return issues
 
 
+# --------------------------------------------
+# Additional High-Impact Checks
+# --------------------------------------------
+
+def check_dict_comprehension(tree: ast.AST) -> List[str]:
+    """
+    Detect patterns where a dict is built via a loop with repeated assignments like:
+        d = {}
+        for k, v in iterable:
+            d[k] = transform(v)
+    and suggest using a dict comprehension instead.
+    We simply flag any assignment to d[...] inside a loop, because that is often convertible.
+    """
+    issues: List[str] = []
+
+    class DictCompVisitor(ast.NodeVisitor):
+        def __init__(self):
+            self.in_loop = False
+
+        def visit_For(self, node: ast.For):
+            prev = self.in_loop
+            self.in_loop = True
+            self.generic_visit(node)
+            self.in_loop = prev
+
+        def visit_While(self, node: ast.While):
+            prev = self.in_loop
+            self.in_loop = True
+            self.generic_visit(node)
+            self.in_loop = prev
+
+        def visit_Assign(self, node: ast.Assign):
+            if self.in_loop and len(node.targets) == 1:
+                target = node.targets[0]
+                if isinstance(target, ast.Subscript) and isinstance(target.value, ast.Name):
+                    dict_name = target.value.id
+                    issues.append(
+                        f"[Optimization] Line {node.lineno}: Building dict '{dict_name}' via loop assignment. "
+                        "Consider using a dict comprehension."
+                    )
+            self.generic_visit(node)
+
+    DictCompVisitor().visit(tree)
+    return issues
+
+
+def check_set_comprehension(tree: ast.AST) -> List[str]:
+    """
+    Detect patterns where a set is built via a loop with repeated add() calls:
+        s = set()
+        for x in iterable:
+            if cond(x):
+                s.add(transform(x))
+    and suggest using a set comprehension instead.
+    """
+    issues: List[str] = []
+
+    class SetCompVisitor(ast.NodeVisitor):
+        def __init__(self):
+            self.in_loop = False
+
+        def visit_For(self, node: ast.For):
+            prev = self.in_loop
+            self.in_loop = True
+            self.generic_visit(node)
+            self.in_loop = prev
+
+        def visit_While(self, node: ast.While):
+            prev = self.in_loop
+            self.in_loop = True
+            self.generic_visit(node)
+            self.in_loop = prev
+
+        def visit_Call(self, node: ast.Call):
+            if (
+                self.in_loop
+                and isinstance(node.func, ast.Attribute)
+                and node.func.attr == "add"
+                and isinstance(node.func.value, ast.Name)
+            ):
+                set_name = node.func.value.id
+                issues.append(
+                    f"[Optimization] Line {node.lineno}: Building set '{set_name}' via add() in a loop. "
+                    "Consider using a set comprehension."
+                )
+            self.generic_visit(node)
+
+    SetCompVisitor().visit(tree)
+    return issues
+
+
+def check_genexpr_vs_list(tree: ast.AST) -> List[str]:
+    """
+    Detect uses of sum(), any(), all(), max(), min() where the argument is a list comprehension,
+    e.g., sum([f(x) for x in data]) and suggest using a generator expression instead.
+    """
+    issues: List[str] = []
+
+    GENFUNCS = {"sum", "any", "all", "max", "min"}
+
+    class GenExprVisitor(ast.NodeVisitor):
+        def visit_Call(self, node: ast.Call):
+            # Check if function is one of GENFUNCS
+            if isinstance(node.func, ast.Name) and node.func.id in GENFUNCS:
+                if node.args:
+                    first_arg = node.args[0]
+                    if isinstance(first_arg, ast.ListComp):
+                        func_name = node.func.id
+                        issues.append(
+                            f"[Optimization] Line {node.lineno}: {func_name}() applied to a list comprehension. "
+                            "Consider using a generator expression (remove the brackets) for better memory efficiency."
+                        )
+            self.generic_visit(node)
+
+    GenExprVisitor().visit(tree)
+    return issues
+
+
+def check_membership_on_list_in_loop(tree: ast.AST) -> List[str]:
+    """
+    Detect 'x in y' checks inside loops where y is a list name, and suggest converting y to a set
+    if membership tests are frequent.
+    We flag any Compare with 'In' or 'NotIn' inside loops where the comparator is a Name.
+    """
+    issues: List[str] = []
+
+    class MembershipVisitor(ast.NodeVisitor):
+        def __init__(self):
+            self.in_loop = False
+
+        def visit_For(self, node: ast.For):
+            prev = self.in_loop
+            self.in_loop = True
+            self.generic_visit(node)
+            self.in_loop = prev
+
+        def visit_While(self, node: ast.While):
+            prev = self.in_loop
+            self.in_loop = True
+            self.generic_visit(node)
+            self.in_loop = prev
+
+        def visit_Compare(self, node: ast.Compare):
+            if self.in_loop:
+                # If 'in' or 'not in' is used
+                for op in node.ops:
+                    if isinstance(op, (ast.In, ast.NotIn)):
+                        for comp in node.comparators:
+                            if isinstance(comp, ast.Name):
+                                list_name = comp.id
+                                issues.append(
+                                    f"[Optimization] Line {node.lineno}: Membership test '{ast.unparse(node)}' inside a loop. "
+                                    f"If '{list_name}' is a large list, consider converting it to a set for faster lookups."
+                                )
+            self.generic_visit(node)
+
+    MembershipVisitor().visit(tree)
+    return issues
+
+
+def check_open_without_context(tree: ast.AST) -> List[str]:
+    """
+    Detect calls to open() that are not within a 'with' context manager. Suggest using
+    'with open(...) as f' to ensure proper resource cleanup and potentially better performance.
+    """
+    issues: List[str] = []
+
+    class OpenVisitor(ast.NodeVisitor):
+        def __init__(self):
+            self.in_with = False
+
+        def visit_With(self, node: ast.With):
+            prev = self.in_with
+            self.in_with = True
+            self.generic_visit(node)
+            self.in_with = prev
+
+        def visit_AsyncWith(self, node: ast.AsyncWith):
+            prev = self.in_with
+            self.in_with = True
+            self.generic_visit(node)
+            self.in_with = prev
+
+        def visit_Call(self, node: ast.Call):
+            if isinstance(node.func, ast.Name) and node.func.id == "open" and not self.in_with:
+                issues.append(
+                    f"[Optimization] Line {node.lineno}: Use of open() outside of a 'with' context manager. "
+                    "Consider using 'with open(...) as f:' for better resource management."
+                )
+            self.generic_visit(node)
+
+    OpenVisitor().visit(tree)
+    return issues
+
+
+# --------------------------------------------
+# Combined Runner
+# --------------------------------------------
+
 def run_all_optimization_checks(source_code: str) -> List[str]:
     """
-    Parse the source code into an AST and run all optimization checks.
-    Returns a combined list of all warning messages.
+    Parse the source code into an AST and run all optimization checks, including:
+      - Unused imports
+      - Unreachable code
+      - String concatenation in loops
+      - len() calls in loops
+      - range(len(...)) patterns
+      - append() in loops
+      - Unused variables
+      - Dict construction via loops
+      - Set construction via loops
+      - sum/any/all/max/min on list comprehensions
+      - Membership tests on lists inside loops
+      - open() without context managers
+
+    Returns a combined list of all warning messages (deduplicated and sorted).
     """
     tree = ast.parse(source_code)
     issues: List[str] = []
+
+    # Core checks
     issues.extend(check_unused_imports(tree))
     issues.extend(check_unreachable_code(tree))
     issues.extend(check_string_concat_in_loop(tree))
@@ -352,4 +584,13 @@ def run_all_optimization_checks(source_code: str) -> List[str]:
     issues.extend(check_range_len_pattern(tree))
     issues.extend(check_append_in_loop(tree))
     issues.extend(check_unused_variables(tree))
+
+    # Additional high-impact checks
+    issues.extend(check_dict_comprehension(tree))
+    issues.extend(check_set_comprehension(tree))
+    issues.extend(check_genexpr_vs_list(tree))
+    issues.extend(check_membership_on_list_in_loop(tree))
+    issues.extend(check_open_without_context(tree))
+
+    # Deduplicate and sort for consistent output
     return sorted(set(issues))

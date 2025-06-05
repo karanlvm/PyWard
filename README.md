@@ -85,7 +85,7 @@ Contributions are welcome! To add new rules or improve existing ones:
 4. Open a pull request detailing your enhancements.
 
 Please adhere to the project’s coding style and include meaningful commit messages.
-
+For more details on the contributing process, see the [CONTRIBUTING](CONTRIBUTING.md)
 ## License
 
 This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for details.
@@ -99,6 +99,13 @@ This project is licensed under the MIT License. See the [LICENSE](LICENSE) file 
             <img src=https://avatars.githubusercontent.com/u/69917470?v=4 width="100;"  style="border-radius:50%;align-items:center;justify-content:center;overflow:hidden;padding-top:10px" alt=Karan Vasudevamurthy/>
             <br />
             <sub style="font-size:14px"><b>Karan Vasudevamurthy</b></sub>
+        </a>
+    </td>
+    <td align="center" style="word-wrap: break-word; width: 150.0; height: 150.0">
+        <a href=https://github.com/DannyNavi>
+            <img src=https://avatars.githubusercontent.com/u/129900868?v=4 width="100;"  style="border-radius:50%;align-items:center;justify-content:center;overflow:hidden;padding-top:10px" alt=DannyNavi/>
+            <br />
+            <sub style="font-size:14px"><b>DannyNavi</b></sub>
         </a>
     </td>
     <td align="center" style="word-wrap: break-word; width: 150.0; height: 150.0">
