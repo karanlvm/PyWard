@@ -1,5 +1,6 @@
 import ast
 import pytest
+from colorama import Fore
 
 from pyward.rules.optimization_rules import (
     check_unused_imports,
@@ -17,6 +18,9 @@ from pyward.rules.optimization_rules import (
     run_all_optimization_checks,
 )
 
+OPTIMIZATION_COLOR = Fore.YELLOW
+OPTIMIZATION_LABEL = f"{OPTIMIZATION_COLOR}[Optimization]{Fore.RESET}"
+
 
 def test_check_unused_imports_single_unused():
     source = (
@@ -27,7 +31,7 @@ def test_check_unused_imports_single_unused():
     tree = ast.parse(source)
     issues = check_unused_imports(tree)
     assert issues == [
-        "[Optimization] Line 2: Imported name 'sys' is never used."
+        f"{OPTIMIZATION_LABEL} Line 2: Imported name 'sys' is never used."
     ]
 
 
@@ -52,8 +56,8 @@ def test_check_unreachable_code_function_level():
     )
     tree = ast.parse(source)
     issues = check_unreachable_code(tree)
-    assert "[Optimization] Line 3: This code is unreachable." in issues
-    assert "[Optimization] Line 4: This code is unreachable." in issues
+    assert f"{OPTIMIZATION_LABEL} Line 3: This code is unreachable." in issues
+    assert f"{OPTIMIZATION_LABEL} Line 4: This code is unreachable." in issues
     assert len(issues) == 2
 
 
@@ -66,7 +70,7 @@ def test_check_unreachable_code_module_level():
     tree = ast.parse(source)
     issues = check_unreachable_code(tree)
     assert issues == [
-        "[Optimization] Line 3: This code is unreachable."
+        f"{OPTIMIZATION_LABEL} Line 3: This code is unreachable."
     ]
 
 
@@ -129,7 +133,7 @@ def test_check_range_len_pattern_detected():
     tree = ast.parse(source)
     issues = check_range_len_pattern(tree)
     assert issues == [
-        "[Optimization] Line 2: Loop over 'range(len(...))'. Consider using 'enumerate()' to iterate directly over the sequence."
+        f"{OPTIMIZATION_LABEL} Line 2: Loop over 'range(len(...))'. Consider using 'enumerate()' to iterate directly over the sequence."
     ]
 
 
@@ -153,7 +157,7 @@ def test_check_append_in_loop_detected():
     tree = ast.parse(source)
     issues = check_append_in_loop(tree)
     assert issues == [
-        "[Optimization] Line 3: Using list.append() inside a loop. Consider using a list comprehension for better performance."
+        f"{OPTIMIZATION_LABEL} Line 3: Using list.append() inside a loop. Consider using a list comprehension for better performance."
     ]
 
 
@@ -176,7 +180,7 @@ def test_check_unused_variables_detected():
     tree = ast.parse(source)
     issues = check_unused_variables(tree)
     assert issues == [
-        "[Optimization] Line 2: Variable 'y' is assigned but never used."
+        f"{OPTIMIZATION_LABEL} Line 2: Variable 'y' is assigned but never used."
     ]
 
 
@@ -189,7 +193,7 @@ def test_check_unused_variables_ignores_underscore():
     tree = ast.parse(source)
     issues = check_unused_variables(tree)
     assert issues == [
-        "[Optimization] Line 3: Variable 'z' is assigned but never used."
+        f"{OPTIMIZATION_LABEL} Line 3: Variable 'z' is assigned but never used."
     ]
 
 
@@ -202,7 +206,7 @@ def test_check_dict_comprehension_detected():
     tree = ast.parse(source)
     issues = check_dict_comprehension(tree)
     assert issues == [
-        "[Optimization] Line 3: Building dict 'd' via loop assignment. Consider using a dict comprehension."
+        f"{OPTIMIZATION_LABEL} Line 3: Building dict 'd' via loop assignment. Consider using a dict comprehension."
     ]
 
 
@@ -215,7 +219,7 @@ def test_check_set_comprehension_detected():
     tree = ast.parse(source)
     issues = check_set_comprehension(tree)
     assert issues == [
-        "[Optimization] Line 3: Building set 's' via add() in a loop. Consider using a set comprehension."
+        f"{OPTIMIZATION_LABEL} Line 3: Building set 's' via add() in a loop. Consider using a set comprehension."
     ]
 
 
@@ -227,7 +231,7 @@ def test_check_genexpr_vs_list_detected():
     tree = ast.parse(source)
     issues = check_genexpr_vs_list(tree)
     assert issues == [
-        "[Optimization] Line 2: sum() applied to a list comprehension. Consider using a generator expression (remove the brackets) for better memory efficiency."
+        f"{OPTIMIZATION_LABEL} Line 2: sum() applied to a list comprehension. Consider using a generator expression (remove the brackets) for better memory efficiency."
     ]
 
 
@@ -241,7 +245,7 @@ def test_check_membership_on_list_in_loop_detected():
     tree = ast.parse(source)
     issues = check_membership_on_list_in_loop(tree)
     assert issues == [
-        "[Optimization] Line 3: Membership test 'x in lst' inside a loop. If 'lst' is a large list, consider converting it to a set for faster lookups."
+        f"{OPTIMIZATION_LABEL} Line 3: Membership test 'x in lst' inside a loop. If 'lst' is a large list, consider converting it to a set for faster lookups."
     ]
 
 
@@ -254,7 +258,7 @@ def test_check_open_without_context_detected():
     tree = ast.parse(source)
     issues = check_open_without_context(tree)
     assert issues == [
-        "[Optimization] Line 1: Use of open() outside of a 'with' context manager. Consider using 'with open(...) as f:' for better resource management."
+        f"{OPTIMIZATION_LABEL} Line 1: Use of open() outside of a 'with' context manager. Consider using 'with open(...) as f:' for better resource management."
     ]
 
 

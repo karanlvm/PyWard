@@ -2,6 +2,7 @@
 
 import ast
 from typing import List
+from pyward.format.formatter import format_security_warning
 
 
 def check_exec_eval_usage(tree: ast.AST) -> List[str]:
@@ -19,10 +20,12 @@ def check_exec_eval_usage(tree: ast.AST) -> List[str]:
         def visit_Call(self, node: ast.Call):
             if isinstance(node.func, ast.Name) and node.func.id in ("exec", "eval"):
                 issues.append(
-                    f"[Security][CVE-2025-3248] Line {node.lineno}: "
-                    f"Use of '{node.func.id}()' detected. "
-                    f"This can lead to code injection (e.g. CVE-2025-3248 in Langflow). "
-                    f"Consider safer alternatives (e.g., ast.literal_eval) or explicit parsing."
+                    format_security_warning(
+                        f"Use of '{node.func.id}()' detected. "
+                        "This can lead to code injection (e.g. CVE-2025-3248 in Langflow). "
+                        "Consider safer alternatives (e.g., ast.literal_eval) or explicit parsing.",
+                        node.lineno, "CVE-2025-3248"
+                    )
                 )
             self.generic_visit(node)
 
@@ -45,19 +48,23 @@ def check_python_json_logger_import(tree: ast.AST) -> List[str]:
             for alias in node.names:
                 if alias.name == "python_json_logger" or alias.name.startswith("python_json_logger."):
                     issues.append(
-                        f"[Security][CVE-2025-27607] Line {node.lineno}: "
-                        f"'python_json_logger' import detected. This package was vulnerable to RCE "
-                        f"between Dec 30, 2024 and Mar 4, 2025 (CVE-2025-27607). "
-                        f"Update to a patched version or remove this dependency."
+                        format_security_warning(
+                            "'python_json_logger' import detected. This package was vulnerable to RCE "
+                            "between Dec 30, 2024 and Mar 4, 2025 (CVE-2025-27607). "
+                            "Update to a patched version or remove this dependency.",
+                            node.lineno, "CVE-2025-27607"
+                        )
                     )
         elif isinstance(node, ast.ImportFrom):
             mod = (node.module or "")
             if mod == "python_json_logger" or mod.startswith("python_json_logger."):
                 issues.append(
-                    f"[Security][CVE-2025-27607] Line {node.lineno}: "
-                    f"'from python_json_logger import ...' detected. This package was vulnerable to RCE "
-                    f"between Dec 30, 2024 and Mar 4, 2025 (CVE-2025-27607). "
-                    f"Update to a patched version or remove this dependency."
+                    format_security_warning(
+                        "'from python_json_logger import ...' detected. This package was vulnerable to RCE "
+                        "between Dec 30, 2024 and Mar 4, 2025 (CVE-2025-27607). "
+                        "Update to a patched version or remove this dependency.",
+                        node.lineno, "CVE-2025-27607"
+                    )
                 )
 
     return issues
@@ -83,9 +90,12 @@ def check_subprocess_usage(tree: ast.AST) -> List[str]:
                             # If shell=True is used
                             if isinstance(kw.value, ast.Constant) and kw.value.value is True:
                                 issues.append(
-                                    f"[Security] Line {node.lineno}: Use of subprocess.{attr.attr}() with shell=True. "
-                                    f"Risk of shell injection. "
-                                    f"Recommendation: Use a list of arguments and shell=False."
+                                    format_security_warning(
+                                        f"Use of subprocess.{attr.attr}() with shell=True. "
+                                        "Risk of shell injection. "
+                                        "Recommendation: Use a list of arguments and shell=False.",
+                                        node.lineno
+                                    )
                                 )
             self.generic_visit(node)
 
@@ -108,9 +118,12 @@ def check_pickle_usage(tree: ast.AST) -> List[str]:
                     "load", "loads"
                 ):
                     issues.append(
-                        f"[Security] Line {node.lineno}: Use of pickle.{node.func.attr}(). "
-                        f"Untrusted pickle data can lead to RCE. "
-                        f"Recommendation: Use json or verify signature before unpickling."
+                        format_security_warning(
+                            f"Use of pickle.{node.func.attr}() detected. "
+                            "Untrusted pickle data can lead to remote code execution (RCE). "
+                            "Recommendation: Use json or verify signature before unpickling.",
+                            node.lineno
+                        )
                     )
             self.generic_visit(node)
 
@@ -137,9 +150,12 @@ def check_yaml_load_usage(tree: ast.AST) -> List[str]:
                             has_safe = True
                     if not has_safe:
                         issues.append(
-                            f"[Security] Line {node.lineno}: Use of yaml.load() without SafeLoader. "
-                            f"Unsafe YAML loading can lead to code execution. "
-                            f"Recommendation: Use yaml.safe_load() or specify Loader=yaml.SafeLoader."
+                            format_security_warning(
+                                "Use of yaml.load() without SafeLoader detected. "
+                                "Unsafe YAML loading can lead to code execution. "
+                                "Recommendation: Use yaml.safe_load() or specify Loader=yaml.SafeLoader.",
+                                node.lineno
+                            )
                         )
             self.generic_visit(node)
 
@@ -165,9 +181,12 @@ def check_hardcoded_secrets(tree: ast.AST) -> List[str]:
                 var_name = target.id.lower()
                 if any(keyword in var_name for keyword in ("key", "secret", "password", "token", "passwd")):
                     issues.append(
-                        f"[Security] Line {node.lineno}: Assignment to '{target.id}' with a literal string. "
-                        f"Hard-coded secret detected. "
-                        f"Recommendation: Store secrets in environment variables or a secrets manager."
+                        format_security_warning(
+                            f"Assignment to '{target.id}' with a literal string. "
+                            "Hard-coded secret detected. "
+                            "Recommendation: Store secrets in environment variables or a secrets manager.",
+                            node.lineno
+                        )
                     )
             self.generic_visit(node)
 
@@ -186,9 +205,12 @@ def check_weak_hashing_usage(tree: ast.AST) -> List[str]:
         def visit_Attribute(self, node: ast.Attribute):
             if isinstance(node.value, ast.Name) and node.value.id == "hashlib" and node.attr in ("md5", "sha1"):
                 issues.append(
-                    f"[Security] Line {node.lineno}: Use of hashlib.{node.attr}(). "
-                    f"{node.attr.upper()} is considered weak. "
-                    f"Recommendation: Use hashlib.sha256 or stronger."
+                    format_security_warning(
+                        f"Use of hashlib.{node.attr}() detected. "
+                        f"{node.attr.upper()} is considered weak. "
+                        "Recommendation: Use hashlib.sha256 or stronger.",
+                        node.lineno
+                    )
                 )
             self.generic_visit(node)
 
