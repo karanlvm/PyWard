@@ -2,7 +2,6 @@
 
 [![PyPI version](https://img.shields.io/pypi/v/pyward-cli?label=PyPI)](https://pypi.org/project/pyward-cli/)
 ![CI](https://github.com/karanlvm/PyWard/actions/workflows/ci.yml/badge.svg)
-[![codecov](https://codecov.io/gh/karanlvm/PyWard/branch/main/graph/badge.svg)](https://codecov.io/gh/karanlvm/PyWard)
 
 PyWard is a lightweight command-line linter for Python code. It helps developers catch optimization issues (like unused imports and unreachable code) and security vulnerabilities (such as unsafe `eval`/`exec` usage and known CVE patterns).
 

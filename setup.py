@@ -12,7 +12,7 @@ setup(
     long_description_content_type="text/markdown",
     author="Karan Vasudevamurthy",
     author_email="karanlvm123@gmail.com",
-    url="https://github.com/karanlvm/pyward-cli",  # ← change to your actual repo URL
+    url="https://github.com/karanlvm/pyward-cli",
     project_urls={
         "Source": "https://github.com/karanlvm/pyward-cli",
         "Documentation": "https://github.com/karanlvm/pyward-cli#readme",
@@ -32,7 +32,6 @@ setup(
         "Development Status :: 4 - Beta",
         "Intended Audience :: Developers",
         "Topic :: Software Development :: Quality Assurance",
-        "Topic :: Software Development :: Linting",
 
         # Supported Python versions
         "Programming Language :: Python :: 3",
