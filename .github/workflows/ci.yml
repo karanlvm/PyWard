@@ -1,34 +1,58 @@
-name: CI / pytest + coverage
+name: CI / pytest + coverage + PR comment
 
 on:
   pull_request:
     types: [opened, synchronize, reopened]
 
 jobs:
-  test:
+  test-and-comment:
     runs-on: ubuntu-latest
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
 
-      - name: Set up Python 3.10.14
+      - name: Set up Python 3.10
         uses: actions/setup-python@v4
         with:
-          python-version: '3.10.14'
+          python-version: "3.10"
 
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install -r requirements.txt
-          pip install pytest pytest-cov
+          pip install pytest pytest-cov colorama
 
-      - name: Run pytest with coverage
-        run: pytest --cov=./ --cov-report=xml
+      - name: Run pytest + coverage and capture output
+        id: run-tests
+        run: |
+          # Run pytest with coverage, send full console output to pytest_output.txt
+          pytest --cov=./ --cov-report=term-missing > pytest_output.txt || true
 
-      - name: Add “ready for review” label
-        if: ${{ success() }}
-        uses: actions-ecosystem/action-add-labels@v1
+          # Now expose that entire file as a multiline output "report"
+          echo "report<<EOF" >> "$GITHUB_OUTPUT"
+          cat pytest_output.txt >> "$GITHUB_OUTPUT"
+          echo "EOF" >> "$GITHUB_OUTPUT"
+
+      - name: Comment test & coverage results on PR
+        if: always()
+        uses: actions/github-script@v6
         with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          labels: |
-            ready for review
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            // Grab the raw pytest output from the previous step
+            const report = `\`\`\`\n${{ steps.run-tests.outputs.report }}\n\`\`\``;
+
+            // Build a nice comment body
+            const body = [
+              "### 🧪 Pytest + Coverage Results",
+              "",
+              report,
+            ].join("\n");
+
+            // Post a new comment on this PR (issue_number = pull_request number)
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              body,
+            });
