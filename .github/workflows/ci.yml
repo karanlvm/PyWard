@@ -2,7 +2,7 @@ name: CI / Pytest and PR Comment
 
 # Run this workflow on all pull requests
 on:
-  pull_request:
+  pull_request_target:
     types: [opened, synchronize, reopened]
 
 # Grant permissions for the workflow to read content and write comments to the PR
