@@ -1,22 +1,26 @@
 name: CI / Pytest and PR Comment
 
-# Run this workflow on all pull requests
+# Run this workflow whenever a PR is opened, synchronized, or reopened
 on:
   pull_request_target:
     types: [opened, synchronize, reopened]
 
-# Grant permissions for the workflow to read content and write comments to the PR
 permissions:
   contents: read
-  pull-requests: write
+  pull-requests: write  # allow commenting on the PR
 
 jobs:
   test-and-comment:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout code
+      - name: Checkout the *fork’s* code for testing
         uses: actions/checkout@v4
+        with:
+          # By default, pull_request_target checks out the base repo.
+          # We want to check out the head (fork) so pytest runs on the contributor’s code:
+          ref: ${{ github.event.pull_request.head.sha }}
+          repository: ${{ github.event.pull_request.head.repo.full_name }}
 
       - name: Set up Python 3.10
         uses: actions/setup-python@v4
@@ -29,26 +33,19 @@ jobs:
           pip install pytest pytest-cov colorama
 
       - name: Run pytest and capture output
-        id: pytest # Give this step an ID to refer to its outcome later
-        # Use continue-on-error so the workflow doesn't stop if tests fail.
-        # This allows the commenting step to always run.
+        id: pytest
         continue-on-error: true
         run: |
-          # The output is piped to a file. Pytest's exit code determines the step's outcome.
           pytest --cov=./ --cov-report=term-missing > pytest_output.txt
 
       - name: Comment test results on PR
-        # This step will always run, even if the previous step failed
         if: always()
         uses: actions/github-script@v7
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
-            // Using the 'fs' module to read the output file
             const fs = require('fs');
             const output = fs.readFileSync('pytest_output.txt', 'utf8');
-
-            // Check the outcome of the pytest step
             const testOutcome = '${{ steps.pytest.outcome }}';
             const statusEmoji = testOutcome === 'success' ? '✅' : '❌';
             const statusTitle = testOutcome === 'success' ? 'All tests passed' : 'Some tests failed';
@@ -68,5 +65,5 @@ jobs:
               owner: context.repo.owner,
               repo: context.repo.repo,
               issue_number: context.issue.number,
-              body: body
+              body
             });
