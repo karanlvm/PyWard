@@ -197,21 +197,32 @@ def check_hardcoded_secrets(tree: ast.AST) -> List[str]:
 def check_weak_hashing_usage(tree: ast.AST) -> List[str]:
     """
     Flag usage of hashlib.md5 or hashlib.sha1, which are considered cryptographically weak.
+    If used with usedforsecurity=False, they are considered secure.
     Recommendation: Use hashlib.sha256 or stronger algorithms.
     """
     issues: List[str] = []
 
     class HashVisitor(ast.NodeVisitor):
-        def visit_Attribute(self, node: ast.Attribute):
-            if isinstance(node.value, ast.Name) and node.value.id == "hashlib" and node.attr in ("md5", "sha1"):
-                issues.append(
-                    format_security_warning(
-                        f"Use of hashlib.{node.attr}() detected. "
-                        f"{node.attr.upper()} is considered weak. "
-                        "Recommendation: Use hashlib.sha256 or stronger.",
-                        node.lineno
+        def visit_Call(self, node: ast.Call):
+            if isinstance(node.func, ast.Attribute):
+                attr = node.func
+                if isinstance(attr.value, ast.Name) and attr.value.id == "hashlib" and attr.attr in (
+                    "md5", "sha1"
+                ):
+                    used_for_security = [] == list(
+                        filter(lambda kw: kw.arg == 'usedforsecurity'
+                               and isinstance(kw.value, ast.Constant)
+                               and kw.value.value is False, node.keywords)
                     )
-                )
+                    if used_for_security:
+                        issues.append(
+                            format_security_warning(
+                                f"Use of hashlib.{attr.attr}() detected. "
+                                f"{attr.attr.upper()} is considered weak. "
+                                "Recommendation: Use hashlib.sha256 or stronger algorithms.",
+                                node.lineno
+                            )
+                        )
             self.generic_visit(node)
 
     HashVisitor().visit(tree)

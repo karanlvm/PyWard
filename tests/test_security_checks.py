@@ -134,6 +134,29 @@ h3 = hashlib.sha256(b"secure")
     assert any("hashlib.sha1()" in msg and "Line 4" in msg for msg in issues)
 
 
+def test_weak_hashing_usage_detect_md5_with_used_for_security_eq_true():
+    source = """
+import hashlib
+h1 = hashlib.md5(b"data", usedforsecurity=True)
+"""
+    tree = _parse_source(source)
+    issues = check_weak_hashing_usage(tree)
+
+    # Should detect md5 (line 3) with usedforsecurity=True
+    assert len(issues) == 1
+    assert any("hashlib.md5()" in msg and "Line 3" in msg for msg in issues)
+
+
+def test_weak_hashing_usage_ignore_md5_with_used_for_security_eq_false():
+    source = """
+import hashlib
+h1 = hashlib.md5(b"data", usedforsecurity=False)
+"""
+    tree = _parse_source(source)
+    issues = check_weak_hashing_usage(tree)
+    assert len(issues) == 0
+
+
 def test_run_all_checks_includes_pickle_usage_warning():
     source = """
 import pickle

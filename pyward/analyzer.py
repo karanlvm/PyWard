@@ -10,6 +10,7 @@ from pyward.rules.optimization_rules import (
 from pyward.rules.security_rules import (
     check_exec_eval_usage,
     check_python_json_logger_import,
+    check_weak_hashing_usage,
 )
 
 
@@ -51,6 +52,9 @@ def analyze_file(
 
         json_logger_issues = check_python_json_logger_import(tree)
         issues.extend(json_logger_issues)
+
+        weak_hashing_issues = check_weak_hashing_usage(tree)
+        issues.extend(weak_hashing_issues)
 
     # If verbose is requested but no issues found, add a placeholder message
     if verbose and not issues:
