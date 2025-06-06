@@ -1,15 +1,16 @@
 import pytest
-from colorama import Fore
+from colorama import Fore, Back, Style
 
 from pyward.format.formatter import (
     format_security_warning,
     format_optimization_warning,
 )
 
-OPTIMIZATION_COLOR = Fore.YELLOW
-SECURITY_COLOR = Fore.RED
-OPTIMIZATION_LABEL = f"{OPTIMIZATION_COLOR}[Optimization]{Fore.RESET}"
-SECURITY_LABEL = f"{SECURITY_COLOR}[Security]{Fore.RESET}"
+OPTIMIZATION_COLOR = f"{Fore.WHITE}{Back.YELLOW}"
+SECURITY_COLOR = f"{Fore.WHITE}{Back.RED}"
+CVE_COLOR = f"{Fore.RED}"
+OPTIMIZATION_LABEL = f"{OPTIMIZATION_COLOR}[Optimization]{Style.RESET_ALL}"
+SECURITY_LABEL = f"{SECURITY_COLOR}[Security]{Style.RESET_ALL}"
 
 
 def test_format_security_warning_with_cve_id():
@@ -22,7 +23,7 @@ def test_format_security_warning_with_cve_id():
         cve_id
     )
     assert warning == (
-        f"{SECURITY_LABEL}[{cve_id}] Line {lineno}: {msg}"
+        f"{SECURITY_LABEL}{CVE_COLOR}[{cve_id}]{Style.RESET_ALL} Line {lineno}: {msg}"
     )
 
 
