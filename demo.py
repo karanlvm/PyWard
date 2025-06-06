@@ -57,7 +57,7 @@ def corge():
 def grault():
     # === Security: weak hashing usage (should trigger weak-hash warnings) ===
     data = b"secret data"
-    h1 = hashlib.md5(data)    # <--- should trigger hashlib.md5 warning
+    h1 = hashlib.md5(data, usedforsecurity=True)    # <--- should trigger hashlib.md5 warning
     h2 = hashlib.sha1(data)   # <--- should trigger hashlib.sha1 warning
     h3 = hashlib.sha256(data) # <--- this is okay
     print(f"MD5: {h1.hexdigest()}")
