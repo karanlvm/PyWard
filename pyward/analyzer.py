@@ -1,17 +1,8 @@
-# pyward/analyzer.py
-
 import ast
 from typing import List
 
-from pyward.rules.optimization_rules import (
-    check_unused_imports,
-    check_unreachable_code,
-)
-from pyward.rules.security_rules import (
-    check_exec_eval_usage,
-    check_python_json_logger_import,
-    check_weak_hashing_usage,
-)
+from pyward.rules.optimization_rules import run_all_optimization_checks
+from pyward.rules.security_rules import run_all_checks as run_all_security_checks
 
 
 def analyze_file(
@@ -21,9 +12,9 @@ def analyze_file(
     verbose: bool = False,
 ) -> List[str]:
     """
-    Parse the given Python file into an AST and run:
-      - Optimization checks if run_optimization is True
-      - Security checks if run_security is True
+    Parse the given Python file into an AST (and source text) and run:
+      - All optimization checks if run_optimization is True
+      - All security checks if run_security is True
 
     Returns a list of human-readable issue strings.
     """
@@ -37,26 +28,14 @@ def analyze_file(
 
     issues: List[str] = []
 
-    # === Optimization rules ===
     if run_optimization:
-        unused_imports = check_unused_imports(tree)
-        issues.extend(unused_imports)
+        # optimization_rules.run_all_optimization_checks expects the source text
+        issues.extend(run_all_optimization_checks(source))
 
-        unreachable = check_unreachable_code(tree)
-        issues.extend(unreachable)
-
-    # === Security rules ===
     if run_security:
-        exec_eval_issues = check_exec_eval_usage(tree)
-        issues.extend(exec_eval_issues)
+        # security_rules.run_all_checks expects the AST
+        issues.extend(run_all_security_checks(tree))
 
-        json_logger_issues = check_python_json_logger_import(tree)
-        issues.extend(json_logger_issues)
-
-        weak_hashing_issues = check_weak_hashing_usage(tree)
-        issues.extend(weak_hashing_issues)
-
-    # If verbose is requested but no issues found, add a placeholder message
     if verbose and not issues:
         issues.append("Verbose: no issues found, but checks were performed.")
 

@@ -1,5 +1,3 @@
-# pyward/cli.py
-
 import argparse
 import sys
 from pyward.analyzer import analyze_file
