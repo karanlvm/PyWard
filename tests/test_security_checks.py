@@ -1,5 +1,3 @@
-# tests/test_security_checks.py
-
 import ast
 import pytest
 
@@ -11,6 +9,7 @@ from pyward.rules.security_rules import (
     check_yaml_load_usage,
     check_hardcoded_secrets,
     check_weak_hashing_usage,
+    check_url_open_usage,
     run_all_checks,
 )
 
@@ -27,7 +26,6 @@ exec("print('hello')")
     tree = _parse_source(source)
     issues = check_exec_eval_usage(tree)
 
-    # Expect two warnings: one for eval(), one for exec()
     assert len(issues) == 2
     assert any("eval()" in msg and "Line 2" in msg for msg in issues)
     assert any("exec()" in msg and "Line 3" in msg for msg in issues)
@@ -41,10 +39,8 @@ from python_json_logger import Foo
     tree = _parse_source(source)
     issues = check_python_json_logger_import(tree)
 
-    # Expect exactly two warnings: one for import, one for import-from
     assert len(issues) == 2
     assert all("CVE-2025-27607" in msg for msg in issues)
-    # Check that line numbers match
     assert any("Line 2" in msg for msg in issues)
     assert any("Line 3" in msg for msg in issues)
 
@@ -60,10 +56,8 @@ subprocess.check_output("ls", shell=True)
     tree = _parse_source(source)
     issues = check_subprocess_usage(tree)
 
-    # There should be four warnings, one per call with shell=True
     assert len(issues) == 4
     assert all("shell=True" in msg for msg in issues)
-    # Check that subprocess.run appears in at least one message
     assert any("subprocess.run" in msg for msg in issues)
     assert any("subprocess.Popen" in msg for msg in issues)
     assert any("subprocess.call" in msg for msg in issues)
@@ -79,7 +73,6 @@ pickle.loads(b"abc")
     tree = _parse_source(source)
     issues = check_pickle_usage(tree)
 
-    # Expect two warnings: one for load(), one for loads()
     assert len(issues) == 2
     assert any("pickle.load()" in msg and "Line 3" in msg for msg in issues)
     assert any("pickle.loads()" in msg and "Line 4" in msg for msg in issues)
@@ -94,7 +87,6 @@ yaml.load("foo", Loader=yaml.SafeLoader)
     tree = _parse_source(source)
     issues = check_yaml_load_usage(tree)
 
-    # Only the first yaml.load (line 3) should be flagged; the second uses SafeLoader and should not
     assert len(issues) == 1
     assert "yaml.load() without SafeLoader" in issues[0]
     assert "Line 3" in issues[0]
@@ -110,8 +102,6 @@ some_var = 123
     tree = _parse_source(source)
     issues = check_hardcoded_secrets(tree)
 
-    # The module flags every assignment containing 'secret', 'key', 'password', or 'token',
-    # including variables starting with 'not_'. So we expect three issues.
     assert len(issues) == 3
     assert any("my_secret" in msg and "Line 2" in msg for msg in issues)
     assert any("not_key" in msg and "Line 3" in msg for msg in issues)
@@ -128,7 +118,6 @@ h3 = hashlib.sha256(b"secure")
     tree = _parse_source(source)
     issues = check_weak_hashing_usage(tree)
 
-    # Should detect md5 (line 3) and sha1 (line 4), but not sha256
     assert len(issues) == 2
     assert any("hashlib.md5()" in msg and "Line 3" in msg for msg in issues)
     assert any("hashlib.sha1()" in msg and "Line 4" in msg for msg in issues)
@@ -142,7 +131,6 @@ h1 = hashlib.md5(b"data", usedforsecurity=True)
     tree = _parse_source(source)
     issues = check_weak_hashing_usage(tree)
 
-    # Should detect md5 (line 3) with usedforsecurity=True
     assert len(issues) == 1
     assert any("hashlib.md5()" in msg and "Line 3" in msg for msg in issues)
 
@@ -154,21 +142,61 @@ h1 = hashlib.md5(b"data", usedforsecurity=False)
 """
     tree = _parse_source(source)
     issues = check_weak_hashing_usage(tree)
+
     assert len(issues) == 0
 
 
-def test_run_all_checks_includes_pickle_usage_warning():
+def test_urlopen_dynamic_url_flags_warning():
+    source = """
+import urllib.request
+url = input()
+urllib.request.urlopen(url)
+"""
+    tree = _parse_source(source)
+    issues = check_url_open_usage(tree)
+
+    assert len(issues) == 1
+    assert "urllib.request.urlopen()" in issues[0]
+    assert "Line 4" in issues[0]
+
+
+def test_urlopen_constant_url_no_warning():
+    source = """
+import urllib.request
+urllib.request.urlopen("https://example.com")
+"""
+    tree = _parse_source(source)
+    issues = check_url_open_usage(tree)
+
+    assert len(issues) == 0
+
+
+def test_urllib3_poolmanager_request_dynamic_url_flags_warning():
+    source = """
+import urllib3
+pm = urllib3.PoolManager()
+pm.request("GET", url)
+"""
+    tree = _parse_source(source)
+    issues = check_url_open_usage(tree)
+
+    assert len(issues) == 1
+    assert "PoolManager().request()" in issues[0]
+    assert "Line 4" in issues[0]
+
+
+def test_run_all_checks_includes_url_and_pickle_warnings():
     source = """
 import pickle
 pickle.loads(b"abc")
+import urllib.request
+url = input()
+urllib.request.urlopen(url)
 """
     tree = _parse_source(source)
 
-    individual_issues = check_pickle_usage(tree)
     all_issues = run_all_checks(tree)
 
-    # run_all_checks should include at least the warning about pickle.loads()
-    assert any("pickle.loads()" in msg for msg in individual_issues)
     assert any("pickle.loads()" in msg for msg in all_issues)
-    # Ensure run_all_checks returns at least as many issues as check_pickle_usage
-    assert len(all_issues) >= len(individual_issues)
+    assert any("urlopen" in msg for msg in all_issues)
+    assert len(all_issues) >= 2

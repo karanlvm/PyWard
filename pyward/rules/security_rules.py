@@ -1,5 +1,3 @@
-# security_checks.py
-
 import ast
 from typing import List
 from pyward.format.formatter import format_security_warning
@@ -79,24 +77,21 @@ def check_subprocess_usage(tree: ast.AST) -> List[str]:
 
     class SubprocessVisitor(ast.NodeVisitor):
         def visit_Call(self, node: ast.Call):
-            # Detect subprocess.run(..., shell=True) or subprocess.Popen(..., shell=True)
             if isinstance(node.func, ast.Attribute):
                 attr = node.func
                 if isinstance(attr.value, ast.Name) and attr.value.id == "subprocess" and attr.attr in (
                     "run", "Popen", "call", "check_output"
                 ):
                     for kw in node.keywords:
-                        if kw.arg == "shell":
-                            # If shell=True is used
-                            if isinstance(kw.value, ast.Constant) and kw.value.value is True:
-                                issues.append(
-                                    format_security_warning(
-                                        f"Use of subprocess.{attr.attr}() with shell=True. "
-                                        "Risk of shell injection. "
-                                        "Recommendation: Use a list of arguments and shell=False.",
-                                        node.lineno
-                                    )
+                        if kw.arg == "shell" and isinstance(kw.value, ast.Constant) and kw.value.value is True:
+                            issues.append(
+                                format_security_warning(
+                                    f"Use of subprocess.{attr.attr}() with shell=True. "
+                                    "Risk of shell injection. "
+                                    "Recommendation: Use a list of arguments and shell=False.",
+                                    node.lineno
                                 )
+                            )
             self.generic_visit(node)
 
     SubprocessVisitor().visit(tree)
@@ -112,7 +107,6 @@ def check_pickle_usage(tree: ast.AST) -> List[str]:
 
     class PickleVisitor(ast.NodeVisitor):
         def visit_Call(self, node: ast.Call):
-            # Detect pickle.load(...) or pickle.loads(...)
             if isinstance(node.func, ast.Attribute):
                 if isinstance(node.func.value, ast.Name) and node.func.value.id == "pickle" and node.func.attr in (
                     "load", "loads"
@@ -140,13 +134,11 @@ def check_yaml_load_usage(tree: ast.AST) -> List[str]:
 
     class YAMLVisitor(ast.NodeVisitor):
         def visit_Call(self, node: ast.Call):
-            # Detect yaml.load(...) without any arguments that enforce SafeLoader
             if isinstance(node.func, ast.Attribute):
                 if isinstance(node.func.value, ast.Name) and node.func.value.id == "yaml" and node.func.attr == "load":
-                    # Check if SafeLoader is specified
                     has_safe = False
                     for kw in node.keywords:
-                        if kw.arg in ("Loader",) and isinstance(kw.value, ast.Attribute) and kw.value.attr == "SafeLoader":
+                        if kw.arg == "Loader" and isinstance(kw.value, ast.Attribute) and kw.value.attr == "SafeLoader":
                             has_safe = True
                     if not has_safe:
                         issues.append(
@@ -173,7 +165,6 @@ def check_hardcoded_secrets(tree: ast.AST) -> List[str]:
 
     class SecretsVisitor(ast.NodeVisitor):
         def visit_Assign(self, node: ast.Assign):
-            # Only check simple assignments (one target)
             if len(node.targets) != 1:
                 return
             target = node.targets[0]
@@ -210,9 +201,9 @@ def check_weak_hashing_usage(tree: ast.AST) -> List[str]:
                     "md5", "sha1"
                 ):
                     used_for_security = [] == list(
-                        filter(lambda kw: kw.arg == 'usedforsecurity'
-                               and isinstance(kw.value, ast.Constant)
-                               and kw.value.value is False, node.keywords)
+                        filter(lambda kw: kw.arg == "usedforsecurity"
+                                       and isinstance(kw.value, ast.Constant)
+                                       and kw.value.value is False, node.keywords)
                     )
                     if used_for_security:
                         issues.append(
@@ -229,6 +220,68 @@ def check_weak_hashing_usage(tree: ast.AST) -> List[str]:
     return issues
 
 
+def check_url_open_usage(tree: ast.AST) -> List[str]:
+    """
+    Flag any direct usage of urllib.request.urlopen(...) or
+    urllib3.PoolManager().request(...), especially when the URL
+    comes from a variable, without explicit hostname/IP validation
+    or sanitization. Recommend validating or sanitizing user-supplied
+    URLs and using strict SSL settings.
+    """
+    issues: List[str] = []
+
+    class URLVisitor(ast.NodeVisitor):
+        def visit_Call(self, node: ast.Call):
+            # Detect urllib.request.urlopen(...)
+            if isinstance(node.func, ast.Attribute):
+                if (
+                    isinstance(node.func.value, ast.Attribute)
+                    and isinstance(node.func.value.value, ast.Name)
+                    and node.func.value.value.id == "urllib"
+                    and node.func.value.attr == "request"
+                    and node.func.attr == "urlopen"
+                ):
+                    if node.args:
+                        url_arg = node.args[0]
+                        if not isinstance(url_arg, ast.Constant):
+                            issues.append(
+                                format_security_warning(
+                                    "Use of urllib.request.urlopen() with a dynamic URL. "
+                                    "If this URL comes from user input, validate or sanitize "
+                                    "the hostname/IP before opening. "
+                                    "Recommendation: validate/sanitize URLs and use strict SSL settings.",
+                                    node.lineno
+                                )
+                            )
+                    else:
+                        issues.append(
+                            format_security_warning(
+                                "Use of urllib.request.urlopen() detected. "
+                                "Ensure any URLs are validated or sanitized and SSL settings are strict.",
+                                node.lineno
+                            )
+                        )
+
+                # Detect any .request(method, url, ...) with a dynamic URL
+                if node.func.attr == "request" and len(node.args) >= 2:
+                    url_arg = node.args[1]
+                    if not isinstance(url_arg, ast.Constant):
+                        issues.append(
+                            format_security_warning(
+                                "Use of urllib3.PoolManager().request() with a dynamic URL. "
+                                "If this URL comes from user input, validate or sanitize "
+                                "the hostname/IP before issuing the request. "
+                                "Recommendation: validate/sanitize URLs and enforce strict SSL settings.",
+                                node.lineno
+                            )
+                        )
+
+            self.generic_visit(node)
+
+    URLVisitor().visit(tree)
+    return issues
+
+
 def run_all_checks(tree: ast.AST) -> List[str]:
     """
     Run all security checks and return a combined list of issues.
@@ -241,6 +294,7 @@ def run_all_checks(tree: ast.AST) -> List[str]:
         check_yaml_load_usage,
         check_hardcoded_secrets,
         check_weak_hashing_usage,
+        check_url_open_usage,
     ]
     all_issues: List[str] = []
     for check in checks:
