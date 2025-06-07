@@ -15,6 +15,7 @@ from pyward.rules.optimization_rules import (
     check_genexpr_vs_list,
     check_membership_on_list_in_loop,
     check_open_without_context,
+    check_list_build_then_copy,
     run_all_optimization_checks,
 )
 
@@ -262,6 +263,30 @@ def test_check_open_without_context_detected():
     ]
 
 
+def test_check_list_build_then_copy_detected():
+    source = (
+        "result = []\n"
+        "for x in [1, 2, 3]:\n"
+        "    if x > 1:\n"
+        "        result.append(x * 2)\n"
+        "final = result[:]\n"
+    )
+    tree = ast.parse(source)
+    issues = check_list_build_then_copy(tree)
+    assert issues == [
+        f"{OPTIMIZATION_LABEL} Line 5: List 'result' is built via append and then copied with slice. Consider using a list comprehension: [transform(x) for x in iterable if cond(x)]"
+    ]
+
+
+def test_check_list_build_then_copy_not_detected():
+    source = (
+        "final = [x * 2 for x in [1, 2, 3] if x > 1]\n"
+    )
+    tree = ast.parse(source)
+    issues = check_list_build_then_copy(tree)
+    assert issues == []
+
+
 def test_run_all_optimization_checks_combined():
     source = (
         "import os\n"
@@ -288,6 +313,10 @@ def test_run_all_optimization_checks_combined():
         "    if x in lst2:\n"
         "        pass\n"
         "f = open('file.txt')\n"
+        "temp = []\n"
+        "for x in range(5):\n"
+        "    temp.append(x)\n"
+        "copy = temp[:]\n"
     )
     issues = run_all_optimization_checks(source)
 
@@ -296,13 +325,14 @@ def test_run_all_optimization_checks_combined():
         "Variable 'y' is assigned but never used",
         "Line 7: This code is unreachable",
         "Loop over 'range(len(...))'",
-        "String concatenation in loop for 's'",
+        "String concatenation in loop for 's'", 
         "Using list.append() inside a loop",
         "Building dict 'd' via loop assignment",
         "Building set 's2' via add() in a loop",
         "sum() applied to a list comprehension",
         "Membership test 'x in lst2' inside a loop",
         "Use of open() outside of a 'with' context manager",
+        "List 'temp' is built via append and then copied with slice",
     ]
     for substring in expected_substrings:
         assert any(substring in msg for msg in issues), f"Missing issue containing: {substring}"
