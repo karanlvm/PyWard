@@ -485,43 +485,38 @@ def check_genexpr_vs_list(tree: ast.AST) -> List[str]:
 
 def check_membership_on_list_in_loop(tree: ast.AST) -> List[str]:
     """
-    Detect 'x in y' checks inside loops where y is a list name, and suggest converting y to a set
-    if membership tests are frequent.
-    We flag any Compare with 'In' or 'NotIn' inside loops where the comparator is a Name.
+    Find membership tests (x in list) inside loops.
+    Suggests converting list to set for O(1) lookups.
     """
-    issues: List[str] = []
+    issues = []
 
     class MembershipVisitor(ast.NodeVisitor):
         def __init__(self):
             self.in_loop = False
 
         def visit_For(self, node: ast.For):
-            prev = self.in_loop
             self.in_loop = True
             self.generic_visit(node)
-            self.in_loop = prev
+            self.in_loop = False
 
         def visit_While(self, node: ast.While):
-            prev = self.in_loop
             self.in_loop = True
             self.generic_visit(node)
-            self.in_loop = prev
+            self.in_loop = False
 
         def visit_Compare(self, node: ast.Compare):
-            if self.in_loop:
-                # If 'in' or 'not in' is used
-                for op in node.ops:
-                    if isinstance(op, (ast.In, ast.NotIn)):
-                        for comp in node.comparators:
-                            if isinstance(comp, ast.Name):
-                                list_name = comp.id
-                                issues.append(
-                                    format_optimization_warning(
-                                        f"Membership test '{ast.unparse(node)}' inside a loop. "
-                                        f"If '{list_name}' is a large list, consider converting it to a set for faster lookups.",
-                                        node.lineno
-                                    )
-                                )
+            if not self.in_loop:
+                return
+                
+            for op, comp in zip(node.ops, node.comparators):
+                if isinstance(op, (ast.In, ast.NotIn)) and isinstance(comp, ast.Name):
+                    issues.append(
+                        format_optimization_warning(
+                            f"Membership test '{ast.unparse(node)}' inside a loop. "
+                            f"If '{comp.id}' is a large list, consider converting it to a set for faster lookups.",
+                            node.lineno
+                        )
+                    )
             self.generic_visit(node)
 
     MembershipVisitor().visit(tree)
@@ -566,46 +561,74 @@ def check_open_without_context(tree: ast.AST) -> List[str]:
     return issues
 
 
+def check_list_build_then_copy(tree: ast.AST) -> List[str]:
+    """
+    Detect list building with append followed by slice copy.
+    Suggests using list comprehension for better readability and performance.
+    """
+    issues = []
+    empty_lists = {}
+    
+    class ListBuildVisitor(ast.NodeVisitor):
+        def visit_Assign(self, node: ast.Assign):
+            if not isinstance(node.targets[0], ast.Name):
+                self.generic_visit(node)
+                return
+
+            # Track empty list assignments: result = []
+            if (isinstance(node.value, ast.List) and len(node.value.elts) == 0):
+                empty_lists[node.targets[0].id] = node.lineno
+
+            # Detect slice copies: final = result[:]
+            if (isinstance(node.value, ast.Subscript) and 
+                isinstance(node.value.value, ast.Name) and 
+                isinstance(node.value.slice, ast.Slice) and 
+                node.value.slice.lower is None and node.value.slice.upper is None):
+                src_list = node.value.value.id
+                if src_list in empty_lists:
+                    issues.append(
+                        format_optimization_warning(
+                            f"List '{src_list}' is built via append and then copied with slice. "
+                            "Consider using a list comprehension: [transform(x) for x in iterable if cond(x)]",
+                            node.lineno
+                        )
+                    )
+            
+            self.generic_visit(node)
+
+    ListBuildVisitor().visit(tree)
+    return issues
+
+
 # --------------------------------------------
 # Combined Runner
 # --------------------------------------------
 
 def run_all_optimization_checks(source_code: str) -> List[str]:
     """
-    Parse the source code into an AST and run all optimization checks, including:
-      - Unused imports
-      - Unreachable code
-      - String concatenation in loops
-      - len() calls in loops
-      - range(len(...)) patterns
-      - append() in loops
-      - Unused variables
-      - Dict construction via loops
-      - Set construction via loops
-      - sum/any/all/max/min on list comprehensions
-      - Membership tests on lists inside loops
-      - open() without context managers
-
-    Returns a combined list of all warning messages (deduplicated and sorted).
+    Analyze source code for potential optimization opportunities.
+    Returns list of suggestions sorted by line number.
     """
     tree = ast.parse(source_code)
-    issues: List[str] = []
+    issues = []
 
-    # Core checks
+    # Basic syntax and style
     issues.extend(check_unused_imports(tree))
+    issues.extend(check_unused_variables(tree))
     issues.extend(check_unreachable_code(tree))
+    
+    # Performance patterns
     issues.extend(check_string_concat_in_loop(tree))
     issues.extend(check_len_call_in_loop(tree))
     issues.extend(check_range_len_pattern(tree))
     issues.extend(check_append_in_loop(tree))
-    issues.extend(check_unused_variables(tree))
+    issues.extend(check_list_build_then_copy(tree))
 
-    # Additional high-impact checks
+    # Advanced optimizations
     issues.extend(check_dict_comprehension(tree))
     issues.extend(check_set_comprehension(tree))
     issues.extend(check_genexpr_vs_list(tree))
     issues.extend(check_membership_on_list_in_loop(tree))
     issues.extend(check_open_without_context(tree))
 
-    # Deduplicate and sort for consistent output
     return sorted(set(issues))
