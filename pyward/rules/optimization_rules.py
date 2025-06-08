@@ -601,18 +601,10 @@ def check_list_build_then_copy(tree: ast.AST) -> List[str]:
 
 
 def check_sort_assignment(tree: ast.AST) -> List[str]:
-    """
-    Detect assignments where list.sort() is assigned to a variable, which will be None.
-    This is often a logical bug since list.sort() modifies the list in-place and returns None.
-    Suggest using sorted() when assignment is needed.
-    """
     issues = []
-
     class SortVisitor(ast.NodeVisitor):
         def visit_Assign(self, node: ast.Assign):
-            if (isinstance(node.value, ast.Call) and 
-                isinstance(node.value.func, ast.Attribute) and 
-                node.value.func.attr == "sort"):
+            if (isinstance(node.value, ast.Call) and isinstance(node.value.func, ast.Attribute) and node.value.func.attr == "sort"):
                 issues.append(
                     format_optimization_warning(
                         f"Assignment of list.sort() which returns None. "
@@ -621,7 +613,6 @@ def check_sort_assignment(tree: ast.AST) -> List[str]:
                     )
                 )
             self.generic_visit(node)
-
     SortVisitor().visit(tree)
     return issues
 
@@ -648,7 +639,7 @@ def run_all_optimization_checks(source_code: str) -> List[str]:
     issues.extend(check_range_len_pattern(tree))
     issues.extend(check_append_in_loop(tree))
     issues.extend(check_list_build_then_copy(tree))
-    issues.extend(check_sort_assignment(tree))  # Add the new check
+    issues.extend(check_sort_assignment(tree))  #new check
 
     # Advanced optimizations
     issues.extend(check_dict_comprehension(tree))

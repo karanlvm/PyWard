@@ -290,7 +290,7 @@ def test_check_list_build_then_copy_not_detected():
 
 def test_check_sort_assignment_detected():
     source = (
-        "lst = [3, 1, 2]\n"
+        "lst = [43, 68, 34]\n"
         "x = lst.sort()\n"
     )
     tree = ast.parse(source)
@@ -303,7 +303,7 @@ def test_check_sort_assignment_detected():
 
 def test_check_sort_assignment_not_detected():
     source = (
-        "lst = [3, 1, 2]\n"
+        "lst = [43, 68, 34]\n"
         "lst.sort()\n"
         "x = sorted(lst)\n"
     )
@@ -342,7 +342,7 @@ def test_run_all_optimization_checks_combined():
         "for x in range(5):\n"
         "    temp.append(x)\n"
         "copy = temp[:]\n"
-        "nums = [3, 1, 2]\n"
+        "nums = [43, 68, 34]\n"
         "sorted_nums = nums.sort()\n"
     )
     issues = run_all_optimization_checks(source)
