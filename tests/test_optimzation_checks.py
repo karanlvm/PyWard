@@ -16,6 +16,7 @@ from pyward.rules.optimization_rules import (
     check_membership_on_list_in_loop,
     check_open_without_context,
     check_list_build_then_copy,
+    check_sort_assignment,  # Add the new check
     run_all_optimization_checks,
 )
 
@@ -287,6 +288,30 @@ def test_check_list_build_then_copy_not_detected():
     assert issues == []
 
 
+def test_check_sort_assignment_detected():
+    source = (
+        "lst = [3, 1, 2]\n"
+        "x = lst.sort()\n"
+    )
+    tree = ast.parse(source)
+    issues = check_sort_assignment(tree)
+    assert issues == [
+        f"{OPTIMIZATION_LABEL} Line 2: Assignment of list.sort() which returns None. "
+        "Use sorted(list) if you need the sorted result in a new variable."
+    ]
+
+
+def test_check_sort_assignment_not_detected():
+    source = (
+        "lst = [3, 1, 2]\n"
+        "lst.sort()\n"
+        "x = sorted(lst)\n"
+    )
+    tree = ast.parse(source)
+    issues = check_sort_assignment(tree)
+    assert issues == []
+
+
 def test_run_all_optimization_checks_combined():
     source = (
         "import os\n"
@@ -317,6 +342,8 @@ def test_run_all_optimization_checks_combined():
         "for x in range(5):\n"
         "    temp.append(x)\n"
         "copy = temp[:]\n"
+        "nums = [3, 1, 2]\n"
+        "sorted_nums = nums.sort()\n"
     )
     issues = run_all_optimization_checks(source)
 
@@ -333,6 +360,7 @@ def test_run_all_optimization_checks_combined():
         "Membership test 'x in lst2' inside a loop",
         "Use of open() outside of a 'with' context manager",
         "List 'temp' is built via append and then copied with slice",
+        "Assignment of list.sort() which returns None",
     ]
     for substring in expected_substrings:
         assert any(substring in msg for msg in issues), f"Missing issue containing: {substring}"
