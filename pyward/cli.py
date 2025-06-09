@@ -1,7 +1,9 @@
+#!/usr/bin/env python3
 import argparse
 import sys
-from pyward.analyzer import analyze_file
 
+from pyward.analyzer import analyze_file
+from pyward.fixer import fix_issues
 
 def main():
     parser = argparse.ArgumentParser(
@@ -32,6 +34,13 @@ def main():
     )
 
     parser.add_argument(
+        "-f",
+        "--fix",
+        action="store_true",
+        help="Automatically fix detected issues in-place.",
+    )
+
+    parser.add_argument(
         "filepath",
         nargs="?",
         help="Path to the Python file you want to analyze (e.g., myscript.py).",
@@ -44,15 +53,37 @@ def main():
         parser.print_help()
         sys.exit(1)
 
-    # Determine which checks to run
-    run_opt = True
-    run_sec = True
-    if args.optimize:
-        run_opt = True
-        run_sec = False
-    elif args.security:
-        run_opt = False
-        run_sec = True
+    # If --fix is set, we only apply fixes (but still report how many issues were fixed)
+    if args.fix:
+        try:
+            with open(args.filepath, "r", encoding="utf-8") as f:
+                original_code = f.read()
+        except FileNotFoundError:
+            print(f"Error: File '{args.filepath}' does not exist.")
+            sys.exit(1)
+        except Exception as e:
+            print(f"Error reading '{args.filepath}': {e}")
+            sys.exit(1)
+
+        # Run analysis to count issues
+        issues = analyze_file(
+            args.filepath,
+            run_optimization=not args.security,
+            run_security=not args.optimize,
+            verbose=args.verbose
+        )
+
+        # Apply fixes
+        fixed_code = fix_issues(original_code)
+        with open(args.filepath, "w", encoding="utf-8") as f:
+            f.write(fixed_code)
+
+        print(f"✔ Applied fixes to {args.filepath} ({len(issues)} issue(s) addressed).")
+        sys.exit(0)
+
+    # Otherwise, run as a pure linter
+    run_opt = not args.security
+    run_sec = not args.optimize
 
     try:
         issues = analyze_file(
@@ -65,11 +96,11 @@ def main():
         if not issues:
             print(f"✅ No issues found in {args.filepath}")
             sys.exit(0)
-        else:
-            print(f"❌ Found {len(issues)} issue(s) in {args.filepath}:")
-            for i, issue in enumerate(issues, start=1):
-                print(f"  {i}. {issue}")
-            sys.exit(1)
+
+        print(f"❌ Found {len(issues)} issue(s) in {args.filepath}:")
+        for i, issue in enumerate(issues, start=1):
+            print(f"  {i}. {issue}")
+        sys.exit(1)
 
     except FileNotFoundError:
         print(f"Error: File '{args.filepath}' does not exist.")
