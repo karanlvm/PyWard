@@ -600,6 +600,22 @@ def check_list_build_then_copy(tree: ast.AST) -> List[str]:
     return issues
 
 
+def check_sort_assignment(tree: ast.AST) -> List[str]:
+    issues = []
+    class SortVisitor(ast.NodeVisitor):
+        def visit_Assign(self, node: ast.Assign):
+            if (isinstance(node.value, ast.Call) and isinstance(node.value.func, ast.Attribute) and node.value.func.attr == "sort"):
+                issues.append(
+                    format_optimization_warning(
+                        f"Assignment of list.sort() which returns None. "
+                        "Use sorted(list) if you need the sorted result in a new variable.",
+                        node.lineno
+                    )
+                )
+            self.generic_visit(node)
+    SortVisitor().visit(tree)
+    return issues
+
 # --------------------------------------------
 # Combined Runner
 # --------------------------------------------
@@ -623,6 +639,7 @@ def run_all_optimization_checks(source_code: str) -> List[str]:
     issues.extend(check_range_len_pattern(tree))
     issues.extend(check_append_in_loop(tree))
     issues.extend(check_list_build_then_copy(tree))
+    issues.extend(check_sort_assignment(tree))  #new check
 
     # Advanced optimizations
     issues.extend(check_dict_comprehension(tree))
