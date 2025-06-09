@@ -110,17 +110,17 @@ This project is licensed under the MIT License. See the [LICENSE](LICENSE) file 
         </a>
     </td>
     <td align="center" style="word-wrap: break-word; width: 150.0; height: 150.0">
-        <a href=https://github.com/DannyNavi>
-            <img src=https://avatars.githubusercontent.com/u/129900868?v=4 width="100;"  style="border-radius:50%;align-items:center;justify-content:center;overflow:hidden;padding-top:10px" alt=DannyNavi/>
-            <br />
-            <sub style="font-size:14px"><b>DannyNavi</b></sub>
-        </a>
-    </td>
-    <td align="center" style="word-wrap: break-word; width: 150.0; height: 150.0">
         <a href=https://github.com/TheRGuy9201>
             <img src=https://avatars.githubusercontent.com/u/191140580?v=4 width="100;"  style="border-radius:50%;align-items:center;justify-content:center;overflow:hidden;padding-top:10px" alt=REECK MONDAL/>
             <br />
             <sub style="font-size:14px"><b>REECK MONDAL</b></sub>
+        </a>
+    </td>
+    <td align="center" style="word-wrap: break-word; width: 150.0; height: 150.0">
+        <a href=https://github.com/DannyNavi>
+            <img src=https://avatars.githubusercontent.com/u/129900868?v=4 width="100;"  style="border-radius:50%;align-items:center;justify-content:center;overflow:hidden;padding-top:10px" alt=DannyNavi/>
+            <br />
+            <sub style="font-size:14px"><b>DannyNavi</b></sub>
         </a>
     </td>
     <td align="center" style="word-wrap: break-word; width: 150.0; height: 150.0">
