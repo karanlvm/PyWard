@@ -1,9 +1,8 @@
-#!/usr/bin/env python3
 import argparse
 import sys
 
 from pyward.analyzer import analyze_file
-from pyward.fixer import fix_issues
+from pyward.fixer import fix_file
 
 def main():
     parser = argparse.ArgumentParser(
@@ -11,7 +10,15 @@ def main():
         description="PyWard: CLI linter for Python (optimization + security checks)",
     )
 
-    # Mutually exclusive flags: -o (optimization only) vs. -s (security only)
+    # fix is independent of optimize/security
+    parser.add_argument(
+        "-f",
+        "--fix",
+        action="store_true",
+        help="Automatically fix issues when possible (currently supports: unused imports).",
+    )
+
+    # Mutually exclusive flags: -o (optimize only) vs. -s (security only)
     group = parser.add_mutually_exclusive_group()
     group.add_argument(
         "-o",
@@ -34,13 +41,6 @@ def main():
     )
 
     parser.add_argument(
-        "-f",
-        "--fix",
-        action="store_true",
-        help="Automatically fix detected issues in-place.",
-    )
-
-    parser.add_argument(
         "filepath",
         nargs="?",
         help="Path to the Python file you want to analyze (e.g., myscript.py).",
@@ -48,44 +48,16 @@ def main():
 
     args = parser.parse_args()
 
-    # If no filepath is provided, show help and exit
     if not args.filepath:
         parser.print_help()
         sys.exit(1)
 
-    # If --fix is set, we only apply fixes (but still report how many issues were fixed)
-    if args.fix:
-        try:
-            with open(args.filepath, "r", encoding="utf-8") as f:
-                original_code = f.read()
-        except FileNotFoundError:
-            print(f"Error: File '{args.filepath}' does not exist.")
-            sys.exit(1)
-        except Exception as e:
-            print(f"Error reading '{args.filepath}': {e}")
-            sys.exit(1)
-
-        # Run analysis to count issues
-        issues = analyze_file(
-            args.filepath,
-            run_optimization=not args.security,
-            run_security=not args.optimize,
-            verbose=args.verbose
-        )
-
-        # Apply fixes
-        fixed_code = fix_issues(original_code)
-        with open(args.filepath, "w", encoding="utf-8") as f:
-            f.write(fixed_code)
-
-        print(f"✔ Applied fixes to {args.filepath} ({len(issues)} issue(s) addressed).")
-        sys.exit(0)
-
-    # Otherwise, run as a pure linter
+    # Decide which checks to run
     run_opt = not args.security
     run_sec = not args.optimize
 
     try:
+        # First pass: analysis
         issues = analyze_file(
             args.filepath,
             run_optimization=run_opt,
@@ -93,6 +65,29 @@ def main():
             verbose=args.verbose,
         )
 
+        # If --fix, apply fixes regardless of original issue count
+        if args.fix:
+            print("🔧 Applying fixes...")
+            fix_file(args.filepath, write=True)
+
+            # Re‐analyze after fixes
+            remaining = analyze_file(
+                args.filepath,
+                run_optimization=run_opt,
+                run_security=run_sec,
+                verbose=args.verbose,
+            )
+
+            if remaining:
+                print(f"⚠️  {len(remaining)} issue(s) remain after fixing:")
+                for i, issue in enumerate(remaining, start=1):
+                    print(f"  {i}. {issue}")
+                sys.exit(1)
+            else:
+                print("✅ All fixable issues were resolved.")
+                sys.exit(0)
+
+        # No --fix: just report
         if not issues:
             print(f"✅ No issues found in {args.filepath}")
             sys.exit(0)

@@ -20,8 +20,14 @@ setup(
     },
     license="MIT",
     keywords="python lint cli security optimization",
-    packages=find_packages(),
-    python_requires=">=3.7",
+    packages=find_packages(),    python_requires=">=3.7",
+    install_requires=[
+        "colorama>=0.4.6",
+        "astroid>=3.0.0",
+    ],
+    tests_require=[
+        "pytest>=8.0.0",
+    ],
     entry_points={
         "console_scripts": [
             "pyward=pyward.cli:main",
