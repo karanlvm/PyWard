@@ -1,7 +1,6 @@
 import pytest
 import ast
 
-# Assuming your linter functions are in 'pyward_linter_checks.py'
 # Adjust the import path if your file structure is different.
 from pyward.rules.nested_loops import (
     check_unused_imports,
