@@ -1,108 +1,155 @@
+#!/usr/bin/env python3
 import argparse
 import sys
+from pathlib import Path
+import ast
 
-from pyward.analyzer import analyze_file
-from pyward.fixer import fix_file
+# Assume these are the correct locations of your check-running functions
+from pyward.fixer.fix_imports import fix_file
+from pyward.optimization.run import run_all_optimization_checks
+from pyward.security.run import run_all_security_checks
+
+
+def analyze_file(filepath: str, run_optimization: bool, run_security: bool, skip_list: list[str]) -> list[str]:
+    try:
+        source = Path(filepath).read_text(encoding="utf-8")
+    except FileNotFoundError as e:
+        raise e
+    except Exception as e:
+        raise IOError(f"Could not read file {filepath}: {e}") from e
+
+    opt_issues = []
+    if run_optimization:
+        opt_issues = run_all_optimization_checks(source, skip=skip_list)
+
+    sec_issues = []
+    if run_security:
+        sec_issues = run_all_security_checks(ast.parse(source, filename=filepath), skip=skip_list)
+
+    return opt_issues + sec_issues
+
+
+class ArgumentParser1(argparse.ArgumentParser):
+    def error(self, message):
+        # 🐛 FIX: now catches missing required args and prints to stdout
+        if "the following arguments are required" in message:
+            output_stream = sys.stdout
+            print(self.format_usage().strip(), file=output_stream)
+            print(f"{self.prog}: error: {message}", file=output_stream)
+            sys.exit(1)
+        super().error(message)
+
 
 def main():
-    parser = argparse.ArgumentParser(
+    parser = ArgumentParser1(
         prog="pyward",
         description="PyWard: CLI linter for Python (optimization + security checks)",
     )
 
-    # fix is independent of optimize/security
     parser.add_argument(
-        "-f",
-        "--fix",
-        action="store_true",
-        help="Automatically fix issues when possible (currently supports: unused imports).",
+        "-f", "--fix", action="store_true",
+        help="Auto-fix unused-import issues (writes file in place)."
     )
-
-    # Mutually exclusive flags: -o (optimize only) vs. -s (security only)
+    parser.add_argument(
+        "-r", "--recursive", action="store_true",
+        help="Recursively lint all .py files under a directory."
+    )
     group = parser.add_mutually_exclusive_group()
     group.add_argument(
-        "-o",
-        "--optimize",
-        action="store_true",
-        help="Run only optimization checks (unused imports, unreachable code).",
+        "-o", "--optimize", action="store_true", help="Only run optimization checks."
     )
     group.add_argument(
-        "-s",
-        "--security",
-        action="store_true",
-        help="Run only security checks (unsafe calls, CVE-based rules).",
+        "-s", "--security", action="store_true", help="Only run security checks."
     )
-
     parser.add_argument(
-        "-v",
-        "--verbose",
-        action="store_true",
-        help="Show detailed warnings and suggestions even if no issues are found.",
+        "-k", "--skip-checks",
+        help="Comma-separated list of rule names (without 'check_' prefix) to skip."
     )
-
     parser.add_argument(
-        "filepath",
-        nargs="?",
-        help="Path to the Python file you want to analyze (e.g., myscript.py).",
+        "-v", "--verbose", action="store_true",
+        help="Verbose output, even if no issues."
+    )
+    parser.add_argument(
+        "filepath", type=Path,
+        help="Path to the Python file or directory to analyze."
     )
 
     args = parser.parse_args()
 
-    if not args.filepath:
-        parser.print_help()
+    # Build list of files to process
+    paths: list[Path] = []
+    if args.filepath.is_dir():
+        if not args.recursive:
+            print(f"Error: {args.filepath} is a directory (use -r to recurse)", file=sys.stderr)
+            sys.exit(1)
+        # recursive glob for .py files
+        paths = list(args.filepath.rglob("*.py"))
+    else:
+        paths = [args.filepath]
+
+    if not paths:
+        print(f"No Python files found in {args.filepath}", file=sys.stderr)
         sys.exit(1)
 
-    # Decide which checks to run
+    # prepare skip list
+    skip_list: list[str] = []
+    if args.skip_checks:
+        for name in args.skip_checks.split(","):
+            nm = name.strip()
+            if not nm.startswith("check_"):
+                nm = f"check_{nm}"
+            skip_list.append(nm)
+
     run_opt = not args.security
     run_sec = not args.optimize
 
-    try:
-        # First pass: analysis
-        issues = analyze_file(
-            args.filepath,
-            run_optimization=run_opt,
-            run_security=run_sec,
-            verbose=args.verbose,
-        )
+    any_issues = False
 
-        # If --fix, apply fixes regardless of original issue count
+    for path in paths:
+        file_str = str(path)
+
+        # apply fixes first, if requested
         if args.fix:
-            print("🔧 Applying fixes...")
-            fix_file(args.filepath, write=True)
+            fix_file(file_str, write=True)
+            if args.verbose:
+                print(f"🔧 Applied import fixes to {file_str}")
 
-            # Re‐analyze after fixes
-            remaining = analyze_file(
-                args.filepath,
+        try:
+            issues = analyze_file(
+                file_str,
                 run_optimization=run_opt,
                 run_security=run_sec,
-                verbose=args.verbose,
+                skip_list=skip_list
             )
+        except FileNotFoundError as e:
+            print(f"Error: {e}", file=sys.stderr)
+            any_issues = True
+            continue
+        except Exception as e:
+            print(f"Error analyzing {file_str}: {e}", file=sys.stderr)
+            any_issues = True
+            continue
 
-            if remaining:
-                print(f"⚠️  {len(remaining)} issue(s) remain after fixing:")
-                for i, issue in enumerate(remaining, start=1):
-                    print(f"  {i}. {issue}")
-                sys.exit(1)
-            else:
-                print("✅ All fixable issues were resolved.")
-                sys.exit(0)
+        # handle verbose/no-issue messaging per file
+        if args.verbose and not issues:
+            print(f"✅ No issues found in {file_str} (verbose)")
+            continue
 
-        # No --fix: just report
         if not issues:
-            print(f"✅ No issues found in {args.filepath}")
-            sys.exit(0)
+            print(f"✅ No issues found in {file_str}")
+            continue
 
-        print(f"❌ Found {len(issues)} issue(s) in {args.filepath}:")
-        for i, issue in enumerate(issues, start=1):
-            print(f"  {i}. {issue}")
-        sys.exit(1)
+        # report issues
+        any_issues = True
+        print(f"\n❌ Found {len(issues)} issue(s) in {file_str}")
+        for idx, msg in enumerate(issues, 1):
+            print(f"{idx}. {msg}")
 
-    except FileNotFoundError:
-        print(f"Error: File '{args.filepath}' does not exist.")
+    # exit status
+    if any_issues:
         sys.exit(1)
-    except Exception as e:
-        print(f"Error analyzing '{args.filepath}': {e}")
-        sys.exit(1)
+    else:
+        sys.exit(0)
 
 
 if __name__ == "__main__":

@@ -1,6 +1,6 @@
 import pytest
 from textwrap import dedent
-from pyward.fixer import ImportFixer
+from pyward.fixer.fix_imports import ImportFixer
 
 def test_remove_single_unused_import():
     source = dedent("""

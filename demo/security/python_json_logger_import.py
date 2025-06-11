@@ -1,0 +1,3 @@
+# triggers check_python_json_logger_import
+import python_json_logger
+from python_json_logger import formatter
