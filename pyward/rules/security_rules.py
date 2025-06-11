@@ -282,6 +282,74 @@ def check_url_open_usage(tree: ast.AST) -> List[str]:
     return issues
 
 
+def check_ssl_verification_disabled(tree: ast.AST) -> List[str]:
+    """
+    Flag any use of the requests library with verify=False which disables SSL certificate verification.
+    This exposes users to man-in-the-middle attacks.
+    Recommendation: Enable SSL verification or provide a custom CA bundle.
+    """
+    issues: List[str] = []
+
+    class SSLVerificationVisitor(ast.NodeVisitor):
+        def visit_Call(self, node: ast.Call):
+            if isinstance(node.func, ast.Attribute):
+                verify_false = False
+                for kw in node.keywords:
+                    if kw.arg == "verify" and isinstance(kw.value, ast.Constant) and kw.value.value is False:
+                        verify_false = True
+                        break
+                
+                if not verify_false:
+                    self.generic_visit(node)
+                    return
+                
+                # Now check the type of call
+                is_name_value = isinstance(node.func.value, ast.Name)
+                
+                # Check for direct requests.method() calls
+                if is_name_value and node.func.value.id == "requests":
+                    if node.func.attr in ("get", "post", "put", "delete", "head", "options", "patch"):
+                        issues.append(
+                            format_security_warning(
+                                f"Use of requests.{node.func.attr}() with verify=False detected. "
+                                "Disabling certificate verification exposes users to "
+                                "man-in-the-middle attacks. "
+                                "Recommendation: Enable SSL verification or provide a "
+                                "custom CA bundle instead.",
+                                node.lineno
+                            )
+                        )
+                    elif node.func.attr == "request":
+                        issues.append(
+                            format_security_warning(
+                                "Use of requests.request() with verify=False detected. "
+                                "Disabling certificate verification exposes users to "
+                                "man-in-the-middle attacks. "
+                                "Recommendation: Enable SSL verification or provide a "
+                                "custom CA bundle instead.",
+                                node.lineno
+                            )
+                        )
+                # Check for session methods or any HTTP method calls that might be using requests
+                elif node.func.attr in ("get", "post", "put", "delete", "head", "options", "patch", "request"):
+                    if not (is_name_value and node.func.value.id == "requests"):
+                        issues.append(
+                            format_security_warning(
+                                f"Use of a method with verify=False detected. "
+                                "Disabling certificate verification exposes users to "
+                                "man-in-the-middle attacks. "
+                                "Recommendation: Enable SSL verification or provide a "
+                                "custom CA bundle instead.",
+                                node.lineno
+                            )
+                        )
+            
+            self.generic_visit(node)
+
+    SSLVerificationVisitor().visit(tree)
+    return issues
+
+
 def run_all_checks(tree: ast.AST) -> List[str]:
     """
     Run all security checks and return a combined list of issues.
@@ -295,6 +363,7 @@ def run_all_checks(tree: ast.AST) -> List[str]:
         check_hardcoded_secrets,
         check_weak_hashing_usage,
         check_url_open_usage,
+        check_ssl_verification_disabled,
     ]
     all_issues: List[str] = []
     for check in checks:

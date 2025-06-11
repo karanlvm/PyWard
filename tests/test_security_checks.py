@@ -10,6 +10,7 @@ from pyward.rules.security_rules import (
     check_hardcoded_secrets,
     check_weak_hashing_usage,
     check_url_open_usage,
+    check_ssl_verification_disabled,
     run_all_checks,
 )
 
@@ -200,3 +201,17 @@ urllib.request.urlopen(url)
     assert any("pickle.loads()" in msg for msg in all_issues)
     assert any("urlopen" in msg for msg in all_issues)
     assert len(all_issues) >= 2
+
+
+def test_run_all_checks_includes_ssl_verification_warnings():
+    source = """
+import requests
+requests.get("https://example.com", verify=False)
+"""
+    tree = _parse_source(source)
+
+    all_issues = run_all_checks(tree)
+
+    assert any("verify=False" in msg for msg in all_issues)
+    assert any("requests.get()" in msg for msg in all_issues)
+    assert any("man-in-the-middle attacks" in msg for msg in all_issues)
