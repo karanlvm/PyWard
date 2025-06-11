@@ -16,7 +16,8 @@ from pyward.rules.optimization_rules import (
     check_membership_on_list_in_loop,
     check_open_without_context,
     check_list_build_then_copy,
-    check_sort_assignment,  # Add the new check
+    check_sort_assignment,
+    check_deeply_nested_loops,  # ← added here
     run_all_optimization_checks,
 )
 
@@ -309,6 +310,33 @@ def test_check_sort_assignment_not_detected():
     )
     tree = ast.parse(source)
     issues = check_sort_assignment(tree)
+    assert issues == []
+
+
+# ─────────────── New complexity‐score tests ───────────────
+
+def test_check_deeply_nested_loops_detected():
+    source = (
+        "for i in range(1):\n"
+        "    for j in range(1):\n"
+        "        for k in range(1):\n"
+        "            pass\n"
+    )
+    tree = ast.parse(source)
+    issues = check_deeply_nested_loops(tree, max_depth=2)
+    assert issues == [
+        f"{OPTIMIZATION_LABEL} Line 3: High complexity: loop nesting depth is 3."
+    ]
+
+
+def test_check_deeply_nested_loops_not_detected_within_limit():
+    source = (
+        "for i in range(1):\n"
+        "    for j in range(1):\n"
+        "        pass\n"
+    )
+    tree = ast.parse(source)
+    issues = check_deeply_nested_loops(tree, max_depth=2)
     assert issues == []
 
 
