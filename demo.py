@@ -2,7 +2,7 @@
 
 # === Optimization: unused imports ===
 import os
-import math               # <--- 'math' is never used, should trigger an unused-import warning
+import math         # pyward: suppress  # <--- 'math' is never used, should trigger an unused-import warning
 import subprocess         # <--- used below for a vulnerable subprocess call
 import pickle             # <--- used below for insecure deserialization
 import yaml               # <--- used below for unsafe YAML loading
