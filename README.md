@@ -14,6 +14,8 @@ PyWard is a lightweight command-line linter for Python code. It helps developers
 - **Security Checks**
   - Flags usage of `eval()` and `exec()` (e.g., CVE-2025-3248)
   - Detects vulnerable imports like `python_json_logger` (e.g., CVE-2025-27607)
+  - Identifies SSL verification being disabled (`verify=False`) in requests library calls
+  - Detects insecure subprocess usage with `shell=True`
 
 - **Flexible CLI**
   - Run all checks by default
