@@ -17,7 +17,7 @@ from pyward.rules.optimization_rules import (
     check_open_without_context,
     check_list_build_then_copy,
     check_sort_assignment,
-    check_deeply_nested_loops,  # ← added here
+    check_deeply_nested_loops, # New complexity‐score check
     run_all_optimization_checks,
 )
 

@@ -9,9 +9,14 @@ import yaml               # <--- used below for unsafe YAML loading
 import hashlib            # <--- used below for weak hashing
 import python_json_logger # <--- should trigger a CVE-2025-27607 warning
 
-# === Security: hard-coded secrets (should trigger hardcoded-secret warnings) ===
-API_KEY = "ABCD1234"              # <--- hard-coded secret
-DB_PASSWORD = "hunter2"           # <--- hard-coded secret
+# === Optimization: unused variable ===
+x = 10
+_unused = 5
+y = 20  # <--- never used, should trigger an unused-variable warning
+
+# === Optimization: unreachable code at module level ===
+raise RuntimeError("stop here")
+z = 99  # <--- unreachable
 
 def foo():
     print("Inside foo(): this will print.")
@@ -64,6 +69,66 @@ def grault():
     print(f"SHA1: {h2.hexdigest()}")
     print(f"SHA256: {h3.hexdigest()}")
 
+def optimize_patterns():
+    # === Optimization: string concat in loop ===
+    s = ""
+    for i in range(3):
+        s = s + "a"            # <--- string concatenation in loop
+    print("".join([s]))
+
+    # === Optimization: augmented add in loop ===
+    t = ""
+    for _ in range(2):
+        t += "b"               # <--- s += … in loop
+
+    # === Optimization: len() in loop ===
+    arr = [1,2,3]
+    for _ in arr:
+        n = len(arr)           # <--- len() inside loop
+
+    # === Optimization: range(len(...)) ===
+    items = [10,20,30]
+    for idx in range(len(items)):  # <--- range(len(...))
+        print(items[idx])
+
+    # === Optimization: list.append in loop ===
+    lst = []
+    for i in range(3):
+        lst.append(i)         # <--- list.append in loop
+
+    # === Optimization: list build then copy via slice ===
+    temp = []
+    for x in [1,2,3]:
+        if x % 2 == 1:
+            temp.append(x*2)
+    copy = temp[:]             # <--- slice copy
+
+    # === Optimization: dict comprehension suggestion ===
+    d = {}
+    for k, v in [("a",1), ("b",2)]:
+        d[k] = v               # <--- dict built in loop
+
+    # === Optimization: set comprehension suggestion ===
+    s2 = set()
+    for x in [1,2,3]:
+        s2.add(x)              # <--- set.add in loop
+
+    # === Optimization: generator vs list comp ===
+    total = sum([x*2 for x in [1,2,3]])  # <--- sum() on list comp
+
+    # === Optimization: membership in loop ===
+    lst2 = [4,5,6]
+    for val in [5,6,4]:
+        if val in lst2:        # <--- membership test inside loop
+            pass
+
+def nested_loops():
+    # === Optimization: complexity score (deeply nested loops) ===
+    for i in range(1):
+        for j in range(1):
+            for k in range(1):   # <--- depth 3 exceeds default max_depth=2
+                print(i, j, k)
+
 def baz():
     # A simple function with no issues
     x = 5
@@ -72,10 +137,15 @@ def baz():
 
 if __name__ == "__main__":
     print("=== Running demo.py ===")
-    foo()
+    try:
+        foo()
+    except:
+        pass
     bar()
     qux()
     quux()
     corge()
     grault()
+    optimize_patterns()
+    nested_loops()
     print(f"baz() returns: {baz()}")
