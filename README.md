@@ -14,7 +14,7 @@ Here you'll find the latest docs built and published via GitHub Pages.
 
 ## 🔄 How to Update or Rebuild the Docs
 
-- The documentation is generated from source files and code in the [`main` branch](https://github.com/karanlvm/PyWard/tree/main) of this repository.
+- The documentation is generated from source files and code in the [main branch](https://github.com/karanlvm/PyWard/tree/main) of this repository.
 - To update or improve the documentation:
   1. **Edit source docs or code** in the `main` branch.
   2. **Follow the contributing guide** ([CONTRIBUTING.md](https://github.com/karanlvm/PyWard/blob/main/CONTRIBUTING.md)) for instructions on rebuilding and publishing docs.
@@ -42,7 +42,7 @@ Here you'll find the latest docs built and published via GitHub Pages.
 ## 📝 For Code, Issues, and Contributions
 
 - **Main CLI code, issues, and contributions:**  
-  [Go to the `main` branch →](https://github.com/karanlvm/PyWard/tree/main)
+  [Go to the main branch →](https://github.com/karanlvm/PyWard/tree/main)
 - **Contribute:**  
   See [CONTRIBUTING.md](https://github.com/karanlvm/PyWard/blob/main/CONTRIBUTING.md)
 
@@ -56,4 +56,4 @@ Here you'll find the latest docs built and published via GitHub Pages.
 
 ---
 
-> _This branch is dedicated only to the static documentation site. For development, issues, and source code, see the [`main`](https://github.com/karanlvm/PyWard/tree/main) branch._
+> _This branch is dedicated only to the static documentation site. For development, issues, and source code, see the [main](https://github.com/karanlvm/PyWard/tree/main) branch._
