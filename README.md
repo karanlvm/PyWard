@@ -97,3 +97,63 @@ See [CONTRIBUTING](CONTRIBUTING.md) for details.
 ## License
 
 MIT License — see [LICENSE](LICENSE).
+
+
+### Contributors
+
+<table>
+<tr>
+    <td align="center" style="word-wrap: break-word; width: 150.0; height: 150.0">
+        <a href=https://github.com/karanlvm>
+            <img src=https://avatars.githubusercontent.com/u/69917470?v=4 width="100;"  style="border-radius:50%;align-items:center;justify-content:center;overflow:hidden;padding-top:10px" alt=Karan Vasudevamurthy/>
+            <br />
+            <sub style="font-size:14px"><b>Karan Vasudevamurthy</b></sub>
+        </a>
+    </td>
+    <td align="center" style="word-wrap: break-word; width: 150.0; height: 150.0">
+        <a href=https://github.com/cafewang>
+            <img src=https://avatars.githubusercontent.com/u/18161562?v=4 width="100;"  style="border-radius:50%;align-items:center;justify-content:center;overflow:hidden;padding-top:10px" alt=cafewang/>
+            <br />
+            <sub style="font-size:14px"><b>cafewang</b></sub>
+        </a>
+    </td>
+    <td align="center" style="word-wrap: break-word; width: 150.0; height: 150.0">
+        <a href=https://github.com/TheRGuy9201>
+            <img src=https://avatars.githubusercontent.com/u/191140580?v=4 width="100;"  style="border-radius:50%;align-items:center;justify-content:center;overflow:hidden;padding-top:10px" alt=Reeck Mondal/>
+            <br />
+            <sub style="font-size:14px"><b>Reeck Mondal</b></sub>
+        </a>
+    </td>
+    <td align="center" style="word-wrap: break-word; width: 150.0; height: 150.0">
+        <a href=https://github.com/nature011235>
+            <img src=https://avatars.githubusercontent.com/u/87652464?v=4 width="100;"  style="border-radius:50%;align-items:center;justify-content:center;overflow:hidden;padding-top:10px" alt=nature011235/>
+            <br />
+            <sub style="font-size:14px"><b>nature011235</b></sub>
+        </a>
+    </td>
+    <td align="center" style="word-wrap: break-word; width: 150.0; height: 150.0">
+        <a href=https://github.com/DannyNavi>
+            <img src=https://avatars.githubusercontent.com/u/129900868?v=4 width="100;"  style="border-radius:50%;align-items:center;justify-content:center;overflow:hidden;padding-top:10px" alt=DannyNavi/>
+            <br />
+            <sub style="font-size:14px"><b>DannyNavi</b></sub>
+        </a>
+    </td>
+    <td align="center" style="word-wrap: break-word; width: 150.0; height: 150.0">
+        <a href=https://github.com/datasciritwik>
+            <img src=https://avatars.githubusercontent.com/u/97968834?v=4 width="100;"  style="border-radius:50%;align-items:center;justify-content:center;overflow:hidden;padding-top:10px" alt=Ritwik Singh/>
+            <br />
+            <sub style="font-size:14px"><b>Ritwik Singh</b></sub>
+        </a>
+    </td>
+</tr>
+<tr>
+    <td align="center" style="word-wrap: break-word; width: 150.0; height: 150.0">
+        <a href=https://github.com/maxadov>
+            <img src=https://avatars.githubusercontent.com/u/214614554?v=4 width="100;"  style="border-radius:50%;align-items:center;justify-content:center;overflow:hidden;padding-top:10px" alt=Aydyn Maxadov/>
+            <br />
+            <sub style="font-size:14px"><b>Aydyn Maxadov</b></sub>
+        </a>
+    </td>
+</tr>
+</table>
+
