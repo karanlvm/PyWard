@@ -41,6 +41,17 @@ class ArgumentParser1(argparse.ArgumentParser):
 
 
 def main():
+     # Print a little ASCII logo only when stdout is a real terminal
+    if sys.stdout.isatty():
+        print(r"""
+     ____      __        __            _ 
+    |  _ \ _   \ \      / /_ _ _ __ __| |
+    | |_) | | | \ \ /\ / / _` | '__/ _` |
+    |  __/| |_| |\ V  V / (_| | | | (_| |
+    |_|    \__, | \_/\_/ \__,_|_|  \__,_|
+            |___/                         
+            PyWard: fast, zero-config Python linting
+        """)
     parser = ArgumentParser1(
         prog="pyward",
         description="PyWard: CLI linter for Python (optimization + security checks)",
