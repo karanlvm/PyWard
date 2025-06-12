@@ -1,25 +1,9 @@
 # PyWard
 
-[![PyPI version](https://img.shields.io/pypi/v/pyward-cli?label=PyPI)](https://pypi.org/project/pyward-cli/)
+[![PyPI version](https://img.shields.io/pypi/v/pyward-cli?label=PyPI)](https://pypi.org/project/pyward-cli/)  
 ![CI](https://github.com/karanlvm/PyWard/actions/workflows/ci.yml/badge.svg)
 
-PyWard is a lightweight command-line linter for Python code. It helps developers catch optimization issues (like unused imports and unreachable code) and security vulnerabilities (such as unsafe `eval`/`exec` usage and known CVE patterns).
-
-## Features
-
-- **Optimization Checks**
-  - Detects unused imports
-  - Flags unreachable code blocks
-
-- **Security Checks**
-  - Flags usage of `eval()` and `exec()` (e.g., CVE-2025-3248)
-  - Detects vulnerable imports like `python_json_logger` (e.g., CVE-2025-27607)
-
-- **Flexible CLI**
-  - Run all checks by default
-  - Use `-o`/`--optimize` to run only optimization checks
-  - Use `-s`/`--security` to run only security checks
-  - Use `-v`/`--verbose` for detailed output, even if no issues are found
+PyWard is a lightweight command-line linter for Python code. It helps developers catch optimization issues and security vulnerabilities.
 
 ## Installation
 
@@ -33,63 +17,87 @@ Ensure that you have Python 3.7 or newer.
 
 ## Usage
 
-Basic usage (runs both optimization and security checks):
+Basic usage (runs all checks):
 
 ```bash
-pyward <your_python_file.py>
+pyward <file_or_directory>
 ```
 
-### Options
+### Flags
+
+- `-r, --recursive`  
+  Scan directories recursively.
 
 - `-o, --optimize`  
-  Run only optimization checks (unused imports, unreachable code).
+  Run only optimization checks.
 
 - `-s, --security`  
-  Run only security checks (unsafe calls, CVE-based rules).
+  Run only security checks.
+
+- `-k, --skip <check>`  
+  Skip a specific check by its name (e.g. `--skip unused_imports`).
 
 - `-v, --verbose`  
-  Show detailed warnings and suggestions, even if no issues are detected.
+  Show detailed warnings even if no issues are found.
 
-### Examples
+### Available Checks
 
-Run all checks on `demo.py`:
+#### Optimization Checks
+- `append_in_loop`  
+- `deeply_nested_loops`  
+- `dict_comprehension`  
+- `genexpr_vs_list`  
+- `len_call_in_loop`  
+- `list_build_then_copy`  
+- `membership_on_list_in_loop`  
+- `open_without_context`  
+- `range_len_pattern`  
+- `set_comprehension`  
+- `sort_assignment`  
+- `string_concat_in_loop`  
+- `unreachable_code`  
+- `unused_imports`  
+- `unused_variables`  
+
+#### Security Checks
+- `exec_eval`  
+- `hardcoded_secrets`  
+- `pickle_usage`  
+- `python_json_logger`  
+- `ssl_verification`  
+- `subprocess_usage`  
+- `url_open_usage`  
+- `weak_hashing_usage`  
+- `yaml_load`  
+
+## Examples
+
+Scan recursively and skip unused_imports:
 
 ```bash
-pyward demo.py
-```
-
-Run only optimization checks:
-
-```bash
-pyward -o demo.py
+pyward -r --skip unused_imports demo
 ```
 
 Run only security checks:
 
 ```bash
-pyward -s demo.py
+pyward -s my_script.py
 ```
 
-Run with verbose mode:
+Verbose output:
 
 ```bash
-pyward -v demo.py
+pyward -v my_script.py
 ```
 
 ## Contributing
 
-Contributions are welcome! To add new rules or improve existing ones:
+See [CONTRIBUTING](CONTRIBUTING.md) for details.
 
-1. Fork the repository.
-2. Create a new branch (e.g., `feature/new-rule`).
-3. Implement your changes and add tests if applicable.
-4. Open a pull request detailing your enhancements.
-
-Please adhere to the project’s coding style and include meaningful commit messages.
-For more details on the contributing process, see the [CONTRIBUTING](CONTRIBUTING.md)
 ## License
 
-This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for details.
+MIT License — see [LICENSE](LICENSE).
+
 
 ### Contributors
 
@@ -148,3 +156,4 @@ This project is licensed under the MIT License. See the [LICENSE](LICENSE) file 
     </td>
 </tr>
 </table>
+
