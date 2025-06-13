@@ -24,6 +24,7 @@ setup(
     install_requires=[
         "colorama>=0.4.6",
         "astroid>=3.0.0",
+        "pandas",
     ],
     tests_require=[
         "pytest>=8.0.0",
