@@ -1,0 +1,3 @@
+# Include all files within the pyward package
+graft pyward
+prune pyward/**/*.pyc
