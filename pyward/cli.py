@@ -1,13 +1,16 @@
 #!/usr/bin/env python3
+import os
 import argparse
 import sys
 from pathlib import Path
 import ast
 
+
 # Assume these are the correct locations of your check-running functions
 from pyward.fixer.fix_imports import fix_file
 from pyward.optimization.run import run_all_optimization_checks
 from pyward.security.run import run_all_security_checks
+from pyward.rule_finder import find_rule_files
 
 
 def analyze_file(filepath: str, run_optimization: bool, run_security: bool, skip_list: list[str]) -> list[str]:
@@ -39,8 +42,22 @@ class ArgumentParser1(argparse.ArgumentParser):
             sys.exit(1)
         super().error(message)
 
-
+def list_checks():
+    """
+    Finds and prints a list of all available check names.
+    """
+    available_checks = find_rule_files()
+    if not available_checks:
+        print("No checks found.")
+        return
+    print("\nAvailable Checks:")
+    for check_file in available_checks:
+        check_name = os.path.splitext(check_file)[0]
+        print(f"- {check_name}")
 def main():
+    if '--list' in sys.argv or '-l' in sys.argv:
+        list_checks()
+        sys.exit(0)
      # Print a little ASCII logo only when stdout is a real terminal
     if sys.stdout.isatty():
         print(r"""
@@ -60,6 +77,10 @@ def main():
     parser.add_argument(
         "-f", "--fix", action="store_true",
         help="Auto-fix unused-import issues (writes file in place)."
+    )
+    parser.add_argument(
+        "-l", "--list", action="store_true",
+        help="List all available checks"
     )
     parser.add_argument(
         "-r", "--recursive", action="store_true",
@@ -155,7 +176,7 @@ def main():
         print(f"\n❌ Found {len(issues)} issue(s) in {file_str}")
         for idx, msg in enumerate(issues, 1):
             print(f"{idx}. {msg}")
-
+            
     # exit status
     if any_issues:
         sys.exit(1)
