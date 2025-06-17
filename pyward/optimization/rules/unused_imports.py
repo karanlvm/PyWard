@@ -1,6 +1,7 @@
 import ast
 from typing import List, Set, Tuple
 from pyward.format.formatter import format_optimization_warning
+from pyward.fixer.fix_imports import ImportFixer
 
 def check_unused_imports(tree: ast.AST) -> List[str]:
     issues: List[str] = []
@@ -32,3 +33,13 @@ def check_unused_imports(tree: ast.AST) -> List[str]:
                 )
             )
     return issues
+
+
+def fix_unused_imports(source: str) -> Tuple[bool, str]:
+    fixer = ImportFixer(source)
+    if not fixer.unused_names_in_import:
+        return (False, source)
+    for name_and_import in fixer.unused_names_in_import:
+        msg = f"from {name_and_import[1].module} import {name_and_import[0]} deleted" if name_and_import[1].is_from else f"import {name_and_import[0]} deleted"
+        print(msg)
+    return (True, fixer.fix())

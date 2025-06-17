@@ -11,14 +11,14 @@ from pathlib import Path
 # analyze_file(), and ArgumentParser1 classes.
 from pyward.cli import main
 
-
+FILE_CONTENT = "import os\n\nprint('Hello')\n"
 @pytest.fixture
 def temp_python_file():
     """Creates a temporary python file for testing."""
     d = tempfile.mkdtemp()
     path = os.path.join(d, "test.py")
     with open(path, "w") as f:
-        f.write("import os\n\nprint('Hello')\n")
+        f.write(FILE_CONTENT)
     yield path
     os.remove(path)
     os.rmdir(d)
@@ -41,7 +41,7 @@ class TestCLIMain:
                 main()
 
         mock_analyze_file.assert_called_once_with(
-            temp_python_file, run_optimization=True, run_security=True, skip_list=[]
+            source=FILE_CONTENT, run_optimization=True, run_security=True, skip_list=[]
         )
         assert "✅ No issues found" in out.getvalue()
         assert e.value.code == 0
@@ -77,7 +77,7 @@ class TestCLIMain:
                 main()
 
         mock_analyze_file.assert_called_once_with(
-            temp_python_file,
+            source=FILE_CONTENT,
             run_optimization=opt,
             run_security=sec,
             skip_list=[]
@@ -96,7 +96,7 @@ class TestCLIMain:
                 main()
 
         mock_analyze_file.assert_called_once_with(
-            temp_python_file,
+            source=FILE_CONTENT,
             run_optimization=True,
             run_security=True,
             skip_list=expected_list
@@ -148,10 +148,9 @@ class TestCLIMain:
         assert e.value.code == 2
         assert "not allowed with" in err.getvalue()
 
-    def test_file_not_found(self, mock_analyze_file):
+    def test_file_not_found(self):
         """Tests the error handling for a file that does not exist."""
-        mock_analyze_file.side_effect = FileNotFoundError("File 'nonexistent.py' not found")
-        with patch.object(sys, "argv", ["pyward", "/nonexistent.py"]), \
+        with patch.object(sys, "argv", ["pyward", "nonexistent.py"]), \
              patch("sys.stderr", new=StringIO()) as err:
             with pytest.raises(SystemExit) as e:
                 main()

@@ -2,29 +2,35 @@
 import argparse
 import sys
 from pathlib import Path
-import ast
+from typing import Tuple
 
 # Assume these are the correct locations of your check-running functions
-from pyward.fixer.fix_imports import fix_file
-from pyward.optimization.run import run_all_optimization_checks
-from pyward.security.run import run_all_security_checks
+from pyward.optimization.run import run_all_optimization_checks, run_all_optimization_fixes
+from pyward.security.run import run_all_security_checks, run_all_security_fixes
 
 
-def analyze_file(filepath: str, run_optimization: bool, run_security: bool, skip_list: list[str]) -> list[str]:
-    try:
-        source = Path(filepath).read_text(encoding="utf-8")
-    except FileNotFoundError as e:
-        raise e
-    except Exception as e:
-        raise IOError(f"Could not read file {filepath}: {e}") from e
+def fix_file(source: str, run_opt: bool, run_sec: bool, skip_list: list[str]) -> Tuple[bool, str]:
+    """fix file according to fixable optimization and security rules, return whether file was changed and fixed source, without changing the original file"""
+    current_source = source
+    file_ever_changed = False
+    if run_opt:
+        file_changed, current_source = run_all_optimization_fixes(current_source, skip_list)
+        file_ever_changed = file_changed or file_ever_changed
+    
+    if run_sec:
+        file_changed, current_source = run_all_security_fixes(current_source, skip_list)
+        file_ever_changed = file_changed or file_ever_changed
+    return (file_ever_changed, current_source)
 
+
+def analyze_file(source: str, run_optimization: bool, run_security: bool, skip_list: list[str]) -> list[str]:
     opt_issues = []
     if run_optimization:
         opt_issues = run_all_optimization_checks(source, skip=skip_list)
 
     sec_issues = []
     if run_security:
-        sec_issues = run_all_security_checks(ast.parse(source, filename=filepath), skip=skip_list)
+        sec_issues = run_all_security_checks(source, skip=skip_list)
 
     return opt_issues + sec_issues
 
@@ -119,21 +125,25 @@ def main():
     for path in paths:
         file_str = str(path)
 
-        # apply fixes first, if requested
-        if args.fix:
-            fix_file(file_str, write=True)
-            if args.verbose:
-                print(f"🔧 Applied import fixes to {file_str}")
-
         try:
+            source = Path(file_str).read_text(encoding="utf-8")
+            
+            # apply fixes first, if requested
+            if args.fix:
+                file_changed, source = fix_file(source, run_opt, run_sec, skip_list)
+                if file_changed:
+                    print(f"🔧 Applied fixes to {file_str}")
+                    with open(file_str, "w", encoding="utf-8") as f:
+                        f.write(source)
+
             issues = analyze_file(
-                file_str,
+                source=source,
                 run_optimization=run_opt,
                 run_security=run_sec,
                 skip_list=skip_list
             )
         except FileNotFoundError as e:
-            print(f"Error: {e}", file=sys.stderr)
+            print(f"Error: File '{file_str}' not found", file=sys.stderr)
             any_issues = True
             continue
         except Exception as e:

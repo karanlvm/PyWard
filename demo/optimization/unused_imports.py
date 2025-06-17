@@ -1,7 +1,12 @@
 # triggers check_unused_imports
 import os
 import sys
-import json  # never used
+from typing import (
+    List,
+    Set,
+    Tuple,
+)
 
 def foo():
     print(os.getcwd())
+    s: Set = set([])
