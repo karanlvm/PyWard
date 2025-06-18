@@ -35,11 +35,14 @@ def check_unused_imports(tree: ast.AST) -> List[str]:
     return issues
 
 
-def fix_unused_imports(source: str) -> Tuple[bool, str]:
+def fix_unused_imports(source: str) -> Tuple[bool, str, List[str]]:
     fixer = ImportFixer(source)
     if not fixer.unused_names_in_import:
-        return (False, source)
-    for name_and_import in fixer.unused_names_in_import:
-        msg = f"from {name_and_import[1].module} import {name_and_import[0]} deleted" if name_and_import[1].is_from else f"import {name_and_import[0]} deleted"
-        print(msg)
-    return (True, fixer.fix())
+        return (False, source, [])
+    
+    def get_msg(item):
+        return f"from {item[1].module} import {item[0]} deleted" \
+            if item[1].is_from else f"import {item[0]} deleted"
+
+    fixes = [get_msg(item) for item in fixer.unused_names_in_import]
+    return (True, fixer.fix(), fixes)

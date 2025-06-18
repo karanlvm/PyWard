@@ -9,18 +9,21 @@ from pyward.optimization.run import run_all_optimization_checks, run_all_optimiz
 from pyward.security.run import run_all_security_checks, run_all_security_fixes
 
 
-def fix_file(source: str, run_opt: bool, run_sec: bool, skip_list: list[str]) -> Tuple[bool, str]:
-    """fix file according to fixable optimization and security rules, return whether file was changed and fixed source, without changing the original file"""
+def fix_file(source: str, run_opt: bool, run_sec: bool, skip_list: list[str]) -> Tuple[bool, str, list[str]]:
+    """fix file according to fixable optimization and security rules, return whether file was changed and fixed source and fix message, without changing the original file"""
     current_source = source
     file_ever_changed = False
+    all_fixes = []
     if run_opt:
-        file_changed, current_source = run_all_optimization_fixes(current_source, skip_list)
+        file_changed, current_source, fixes = run_all_optimization_fixes(current_source, skip_list)
         file_ever_changed = file_changed or file_ever_changed
+        all_fixes.extend(fixes)
     
     if run_sec:
-        file_changed, current_source = run_all_security_fixes(current_source, skip_list)
+        file_changed, current_source, fixes = run_all_security_fixes(current_source, skip_list)
         file_ever_changed = file_changed or file_ever_changed
-    return (file_ever_changed, current_source)
+        all_fixes.extend(fixes)
+    return (file_ever_changed, current_source, all_fixes)
 
 
 def analyze_file(source: str, run_optimization: bool, run_security: bool, skip_list: list[str]) -> list[str]:
@@ -130,9 +133,11 @@ def main():
             
             # apply fixes first, if requested
             if args.fix:
-                file_changed, source = fix_file(source, run_opt, run_sec, skip_list)
+                file_changed, source, all_fixes = fix_file(source, run_opt, run_sec, skip_list)
                 if file_changed:
-                    print(f"🔧 Applied fixes to {file_str}")
+                    print(f"\n🔧 Applied {len(all_fixes)} fix(es) to {file_str}")
+                    for idx, msg in enumerate(all_fixes, 1):
+                        print(f"{idx}. {msg}")
                     with open(file_str, "w", encoding="utf-8") as f:
                         f.write(source)
 
@@ -142,7 +147,7 @@ def main():
                 run_security=run_sec,
                 skip_list=skip_list
             )
-        except FileNotFoundError as e:
+        except FileNotFoundError:
             print(f"Error: File '{file_str}' not found", file=sys.stderr)
             any_issues = True
             continue

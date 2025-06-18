@@ -30,6 +30,11 @@ def mock_analyze_file():
     with patch("pyward.cli.analyze_file") as m:
         yield m
 
+@pytest.fixture
+def mock_fix_file():
+    """Mocks the fix_file function within the cli module."""
+    with patch("pyward.cli.fix_file") as m:
+        yield m
 
 class TestCLIMain:
     def test_no_issues(self, temp_python_file, mock_analyze_file):
@@ -167,4 +172,45 @@ class TestCLIMain:
                 main()
 
         assert f"Error analyzing {temp_python_file}: boom" in err.getvalue()
+        assert e.value.code == 1
+
+    @pytest.mark.parametrize("fix_flag", ["-f", "--fix"])
+    def test_fix_flag_no_issues(self, temp_python_file, mock_analyze_file, mock_fix_file, fix_flag):
+        """Tests verbose output when there are no issues."""
+        mock_analyze_file.return_value = []
+        mock_fix_file.return_value = (False, "", [])
+        with patch.object(sys, "argv", ["pyward", fix_flag, temp_python_file]), \
+             patch("sys.stdout", new=StringIO()) as out:
+            with pytest.raises(SystemExit) as e:
+                main()
+
+        assert "✅ No issues found in" in out.getvalue()
+        assert e.value.code == 0
+
+    @pytest.mark.parametrize("fix_flag", ["-f", "--fix"])
+    def test_fix_flag_file_changed(self, temp_python_file, mock_analyze_file, mock_fix_file, fix_flag):
+        """Tests verbose output when there are no issues."""
+        mock_analyze_file.return_value = []
+        fix_msgs = ["fix message"]
+        mock_fix_file.return_value = (True, "new content", fix_msgs)
+        with patch.object(sys, "argv", ["pyward", fix_flag, temp_python_file]), \
+             patch("sys.stdout", new=StringIO()) as out:
+            with pytest.raises(SystemExit) as e:
+                main()
+
+        assert f"🔧 Applied {len(fix_msgs)} fix(es) to {temp_python_file}" in out.getvalue()
+        assert fix_msgs[0] in out.getvalue()
+        assert e.value.code == 0
+        
+    @pytest.mark.parametrize("fix_flag", ["-f", "--fix"])
+    def test_fix_flag_with_fix_file_throws(self, temp_python_file, mock_analyze_file, mock_fix_file, fix_flag):
+        """Tests verbose output when there are no issues."""
+        err_msg = "something wrong!"
+        mock_fix_file.side_effect = Exception(err_msg)
+        with patch.object(sys, "argv", ["pyward", fix_flag, temp_python_file]), \
+             patch("sys.stderr", new=StringIO()) as err:
+            with pytest.raises(SystemExit) as e:
+                main()
+
+        assert f"Error analyzing {temp_python_file}: {err_msg}" in err.getvalue()
         assert e.value.code == 1

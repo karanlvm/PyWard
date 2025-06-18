@@ -23,14 +23,15 @@ def run_all_optimization_checks(source_code: str, skip: List[str] = None) -> Lis
     return issues
 
 
-def run_all_optimization_fixes(source_code: str, skip: List[str] = None) -> Tuple[bool, str]:
-    """fix code with fixable optimization rules, add rule into skip list, return fix flag and fixed code"""
+def run_all_optimization_fixes(source_code: str, skip: List[str] = None) -> Tuple[bool, str, List[str]]:
+    """fix code with fixable optimization rules, return fix flag and fixed code"""
     skip_set = set(skip or [])
 
     pkg = importlib.import_module(f"{__package__}.rules")
     prefix = pkg.__name__ + "."
     current_source = source_code
     file_ever_changed = False
+    all_fixes = []
     for _, mod_name, _ in pkgutil.iter_modules(pkg.__path__, prefix):
         mod = importlib.import_module(mod_name)
         rule_name = path.basename(str(mod.__file__))[0:-3]
@@ -41,9 +42,9 @@ def run_all_optimization_fixes(source_code: str, skip: List[str] = None) -> Tupl
                 continue
             fix_fn = getattr(mod, fix_fn_name)
             if callable(fix_fn):
-                file_changed, current_source = fix_fn(source_code)
+                file_changed, current_source, fixes = fix_fn(source_code)
                 file_ever_changed = file_changed or file_ever_changed
-                skip.append(check_fn_name)
+                all_fixes.extend(fixes)
 
-    return (file_ever_changed, current_source)
+    return (file_ever_changed, current_source, all_fixes)
 
