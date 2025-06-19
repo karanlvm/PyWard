@@ -3,33 +3,73 @@ import os
 import argparse
 import sys
 from pathlib import Path
-import ast
+from typing import Tuple
 
-
-# Assume these are the correct locations of your check-running functions
-from pyward.fixer.fix_imports import fix_file
-from pyward.optimization.run import run_all_optimization_checks
-from pyward.security.run import run_all_security_checks
+from pyward.optimization.run import (
+    run_all_optimization_checks,
+    run_all_optimization_fixes,
+)
+from pyward.security.run import (
+    run_all_security_checks,
+    run_all_security_fixes,
+)
 from pyward.rule_finder import find_rule_files
 
 
-def analyze_file(filepath: str, run_optimization: bool, run_security: bool, skip_list: list[str]) -> list[str]:
-    try:
-        source = Path(filepath).read_text(encoding="utf-8")
-    except FileNotFoundError as e:
-        raise e
-    except Exception as e:
-        raise IOError(f"Could not read file {filepath}: {e}") from e
+def fix_file(
+    source: str,
+    run_opt: bool,
+    run_sec: bool,
+    skip_list: list[str],
+) -> Tuple[bool, str, list[str]]:
+    """
+    Fix file according to fixable optimization and security rules.
+    Returns (file_ever_changed, fixed_source, fix_messages).
+    """
+    current_source = source
+    file_ever_changed = False
+    all_fixes: list[str] = []
 
-    opt_issues = []
+    if run_opt:
+        changed, current_source, fixes = run_all_optimization_fixes(
+            current_source, skip_list
+        )
+        file_ever_changed = file_ever_changed or changed
+        all_fixes.extend(fixes)
+
+    if run_sec:
+        changed, current_source, fixes = run_all_security_fixes(
+            current_source, skip_list
+        )
+        file_ever_changed = file_ever_changed or changed
+        all_fixes.extend(fixes)
+
+    return file_ever_changed, current_source, all_fixes
+
+
+def analyze_file(
+    source: str,
+    run_optimization: bool,
+    run_security: bool,
+    skip_list: list[str],
+) -> list[str]:
+    """
+    Run optimization and/or security checks on the given source string.
+    Returns a list of issue messages.
+    """
+    issues: list[str] = []
+
     if run_optimization:
-        opt_issues = run_all_optimization_checks(source, skip=skip_list)
+        issues.extend(
+            run_all_optimization_checks(source, skip=skip_list)
+        )
 
-    sec_issues = []
     if run_security:
-        sec_issues = run_all_security_checks(ast.parse(source, filename=filepath), skip=skip_list)
+        issues.extend(
+            run_all_security_checks(source, skip=skip_list)
+        )
 
-    return opt_issues + sec_issues
+    return issues
 
 
 class ArgumentParser1(argparse.ArgumentParser):
@@ -42,79 +82,101 @@ class ArgumentParser1(argparse.ArgumentParser):
             sys.exit(1)
         super().error(message)
 
+
 def list_checks():
     """
     Finds and prints a list of all available check names.
     """
-    available_checks = find_rule_files()
-    if not available_checks:
+    available = find_rule_files()
+    if not available:
         print("No checks found.")
         return
+
     print("\nAvailable Checks:")
-    for check_file in available_checks:
-        check_name = os.path.splitext(check_file)[0]
-        print(f"- {check_name}")
+    for f in available:
+        print(f"- {os.path.splitext(f)[0]}")
+
+
 def main():
-    if '--list' in sys.argv or '-l' in sys.argv:
+    if "--list" in sys.argv or "-l" in sys.argv:
         list_checks()
         sys.exit(0)
-     # Print a little ASCII logo only when stdout is a real terminal
+
+    # Only show ASCII logo when running in a real terminal
     if sys.stdout.isatty():
         print(r"""
-     ____      __        __            _ 
-    |  _ \ _   \ \      / /_ _ _ __ __| |
-    | |_) | | | \ \ /\ / / _` | '__/ _` |
-    |  __/| |_| |\ V  V / (_| | | | (_| |
-    |_|    \__, | \_/\_/ \__,_|_|  \__,_|
-            |___/                         
-            PyWard: fast, zero-config Python linting
-        """)
+ ____      __        __            _ 
+|  _ \ _   \ \      / /_ _ _ __ __| |
+| |_) | | | \ \ /\ / / _` | '__/ _` |
+|  __/| |_| |\ V  V / (_| | | | (_| |
+|_|    \__, | \_/\_/ \__,_|_|  \__,_|
+        |___/                         
+        PyWard: fast, zero-config Python linting
+""")
+
     parser = ArgumentParser1(
         prog="pyward",
         description="PyWard: CLI linter for Python (optimization + security checks)",
     )
-
     parser.add_argument(
-        "-f", "--fix", action="store_true",
-        help="Auto-fix unused-import issues (writes file in place)."
+        "-f",
+        "--fix",
+        action="store_true",
+        help="Auto-fix optimization and security issues (writes file in place).",
     )
     parser.add_argument(
-        "-l", "--list", action="store_true",
-        help="List all available checks"
+        "-l",
+        "--list",
+        action="store_true",
+        help="List all available checks",
     )
     parser.add_argument(
-        "-r", "--recursive", action="store_true",
-        help="Recursively lint all .py files under a directory."
+        "-r",
+        "--recursive",
+        action="store_true",
+        help="Recursively lint all .py files under a directory.",
     )
     group = parser.add_mutually_exclusive_group()
     group.add_argument(
-        "-o", "--optimize", action="store_true", help="Only run optimization checks."
+        "-o",
+        "--optimize",
+        action="store_true",
+        help="Only run optimization checks.",
     )
     group.add_argument(
-        "-s", "--security", action="store_true", help="Only run security checks."
+        "-s",
+        "--security",
+        action="store_true",
+        help="Only run security checks.",
     )
     parser.add_argument(
-        "-k", "--skip-checks",
-        help="Comma-separated list of rule names (without 'check_' prefix) to skip."
+        "-k",
+        "--skip-checks",
+        help="Comma-separated list of rule names (without 'check_' prefix) to skip.",
     )
     parser.add_argument(
-        "-v", "--verbose", action="store_true",
-        help="Verbose output, even if no issues."
+        "-v",
+        "--verbose",
+        action="store_true",
+        help="Verbose output, even if no issues.",
     )
     parser.add_argument(
-        "filepath", type=Path,
-        help="Path to the Python file or directory to analyze."
+        "filepath",
+        type=Path,
+        help="Path to the Python file or directory to analyze.",
     )
 
     args = parser.parse_args()
 
-    # Build list of files to process
+    # Build list of files
     paths: list[Path] = []
     if args.filepath.is_dir():
         if not args.recursive:
-            print(f"Error: {args.filepath} is a directory (use -r to recurse)", file=sys.stderr)
+            print(
+                f"Error: {args.filepath} is a directory (use -r to recurse)",
+                file=sys.stderr,
+            )
             sys.exit(1)
-        # recursive glob for .py files
         paths = list(args.filepath.rglob("*.py"))
     else:
         paths = [args.filepath]
@@ -123,7 +185,7 @@ def main():
         print(f"No Python files found in {args.filepath}", file=sys.stderr)
         sys.exit(1)
 
-    # prepare skip list
+    # Prepare skip list
     skip_list: list[str] = []
     if args.skip_checks:
         for name in args.skip_checks.split(","):
@@ -134,27 +196,36 @@ def main():
 
     run_opt = not args.security
     run_sec = not args.optimize
-
     any_issues = False
 
     for path in paths:
         file_str = str(path)
 
-        # apply fixes first, if requested
-        if args.fix:
-            fix_file(file_str, write=True)
-            if args.verbose:
-                print(f"🔧 Applied import fixes to {file_str}")
-
         try:
+            source = Path(file_str).read_text(encoding="utf-8")
+
+            # apply fixes first, if requested
+            if args.fix:
+                changed, new_src, fixes = fix_file(
+                    source, run_opt, run_sec, skip_list
+                )
+                if changed:
+                    print(f"\n🔧 Applied {len(fixes)} fix(es) to {file_str}")
+                    for idx, msg in enumerate(fixes, 1):
+                        print(f"{idx}. {msg}")
+                    with open(file_str, "w", encoding="utf-8") as f:
+                        f.write(new_src)
+                    source = new_src
+
             issues = analyze_file(
-                file_str,
+                source,
                 run_optimization=run_opt,
                 run_security=run_sec,
-                skip_list=skip_list
+                skip_list=skip_list,
             )
-        except FileNotFoundError as e:
-            print(f"Error: {e}", file=sys.stderr)
+
+        except FileNotFoundError:
+            print(f"Error: File '{file_str}' not found", file=sys.stderr)
             any_issues = True
             continue
         except Exception as e:
@@ -162,26 +233,19 @@ def main():
             any_issues = True
             continue
 
-        # handle verbose/no-issue messaging per file
-        if args.verbose and not issues:
-            print(f"✅ No issues found in {file_str} (verbose)")
-            continue
-
+        # report
         if not issues:
-            print(f"✅ No issues found in {file_str}")
-            continue
+            if args.verbose:
+                print(f"✅ No issues found in {file_str} (verbose)")
+            else:
+                print(f"✅ No issues found in {file_str}")
+        else:
+            any_issues = True
+            print(f"\n❌ Found {len(issues)} issue(s) in {file_str}")
+            for idx, msg in enumerate(issues, 1):
+                print(f"{idx}. {msg}")
 
-        # report issues
-        any_issues = True
-        print(f"\n❌ Found {len(issues)} issue(s) in {file_str}")
-        for idx, msg in enumerate(issues, 1):
-            print(f"{idx}. {msg}")
-            
-    # exit status
-    if any_issues:
-        sys.exit(1)
-    else:
-        sys.exit(0)
+    sys.exit(1 if any_issues else 0)
 
 
 if __name__ == "__main__":
