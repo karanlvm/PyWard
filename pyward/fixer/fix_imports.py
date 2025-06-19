@@ -3,6 +3,7 @@ from typing import List, Optional, Tuple, Set, Dict
 import re
 from dataclasses import dataclass
 
+
 @dataclass
 class ImportInfo:
     """Information about an import statement."""
@@ -15,6 +16,15 @@ class ImportInfo:
     module: Optional[str] = None
     level: int = 0
 
+    def __eq__(self, value: object) -> bool:
+        """eq for the same object"""
+        return value == self
+    
+    def __hash__(self) -> int:
+        """same object with same hash value"""
+        return 13 * hash(self.lineno) + hash(self.module)
+
+
 class ImportFixer:
     """Fixes unused imports by removing them from the source code."""
     
@@ -22,7 +32,7 @@ class ImportFixer:
         self.source_code = source_code
         self.parsed_source = self._preprocess_source(source_code)
         self.tree = ast.parse(self.parsed_source)
-        self.unused_names: Set[str] = set()  
+        self.unused_names_in_import: Set[Tuple[str, ImportInfo]] = set()  
         self.imports: Dict[int, ImportInfo] = {}  
         self.lines = self.source_code.splitlines()
         self._collect_imports()
@@ -117,7 +127,7 @@ class ImportFixer:
             for name in info.names:
                 alias = info.aliases.get(name, name)
                 if alias not in used_names:
-                    self.unused_names.add(name)
+                    self.unused_names_in_import.add((name, info))
 
     def _fix_multiline_import(self, info: ImportInfo) -> List[str]:
         """Fix a multiline import statement while preserving formatting."""
@@ -129,7 +139,8 @@ class ImportFixer:
         header = original_lines[0] 
         result.append(header)
 
-        used_names = set(n for n in info.names if n not in self.unused_names)
+        unused_names = [n[0] for n in self.unused_names_in_import]
+        used_names = set(n for n in info.names if n not in unused_names)
         
         for line in original_lines[1:-1]:  
             stripped = line.strip()
@@ -157,7 +168,8 @@ class ImportFixer:
 
     def _fix_simple_import(self, info: ImportInfo) -> Optional[str]:
         """Fix a single-line import statement."""
-        used_names = [n for n in info.names if n not in self.unused_names]
+        unused_names = [n[0] for n in self.unused_names_in_import]
+        used_names = [n for n in info.names if n not in unused_names]
         
         if not used_names:
             return None
@@ -177,22 +189,22 @@ class ImportFixer:
 
     def fix(self) -> str:
         """Apply fixes and return the modified source code."""
-        if not self.unused_names:
+        if not self.unused_names_in_import:
             return self.source_code
 
         result_lines = self.lines.copy()
-        
+        unused_names = [n[0] for n in self.unused_names_in_import]
         for lineno in sorted(self.imports.keys(), reverse=True):
             info = self.imports[lineno]
             
-            if all(name in self.unused_names for name in info.names):
+            if all(name in unused_names for name in info.names):
                 if info.end_lineno:
                     del result_lines[info.lineno - 1:info.end_lineno]
                 else:
                     del result_lines[info.lineno - 1]
                 continue
 
-            if not any(name in self.unused_names for name in info.names):
+            if not any(name in unused_names for name in info.names):
                 continue
 
             if info.end_lineno:

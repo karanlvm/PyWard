@@ -140,9 +140,9 @@ MIT License — see [LICENSE](LICENSE).
     </td>
     <td align="center" style="word-wrap: break-word; width: 150.0; height: 150.0">
         <a href=https://github.com/nayanaaj9>
-            <img src=https://avatars.githubusercontent.com/u/215096912?v=4 width="100;"  style="border-radius:50%;align-items:center;justify-content:center;overflow:hidden;padding-top:10px" alt=Nayana/>
+            <img src=https://avatars.githubusercontent.com/u/215096912?v=4 width="100;"  style="border-radius:50%;align-items:center;justify-content:center;overflow:hidden;padding-top:10px" alt=Nayana Jagadeesh/>
             <br />
-            <sub style="font-size:14px"><b>Nayana</b></sub>
+            <sub style="font-size:14px"><b>Nayana Jagadeesh</b></sub>
         </a>
     </td>
 </tr>
