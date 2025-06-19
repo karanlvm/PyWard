@@ -12,6 +12,7 @@ from pathlib import Path
 from pyward.cli import main
 
 FILE_CONTENT = "import os\n\nprint('Hello')\n"
+
 @pytest.fixture
 def temp_python_file():
     """Creates a temporary python file for testing."""
@@ -46,7 +47,7 @@ class TestCLIMain:
                 main()
 
         mock_analyze_file.assert_called_once_with(
-            source=FILE_CONTENT, run_optimization=True, run_security=True, skip_list=[]
+            FILE_CONTENT, run_optimization=True, run_security=True, skip_list=[]
         )
         assert "✅ No issues found" in out.getvalue()
         assert e.value.code == 0
@@ -82,10 +83,7 @@ class TestCLIMain:
                 main()
 
         mock_analyze_file.assert_called_once_with(
-            source=FILE_CONTENT,
-            run_optimization=opt,
-            run_security=sec,
-            skip_list=[]
+            FILE_CONTENT, run_optimization=opt, run_security=sec, skip_list=[]
         )
 
     def test_skip_checks_argument(self, temp_python_file, mock_analyze_file):
@@ -101,10 +99,7 @@ class TestCLIMain:
                 main()
 
         mock_analyze_file.assert_called_once_with(
-            source=FILE_CONTENT,
-            run_optimization=True,
-            run_security=True,
-            skip_list=expected_list
+            FILE_CONTENT, run_optimization=True, run_security=True, skip_list=expected_list
         )
 
     @pytest.mark.parametrize("vf", ["-v", "--verbose"])
@@ -176,7 +171,7 @@ class TestCLIMain:
 
     @pytest.mark.parametrize("fix_flag", ["-f", "--fix"])
     def test_fix_flag_no_issues(self, temp_python_file, mock_analyze_file, mock_fix_file, fix_flag):
-        """Tests verbose output when there are no issues."""
+        """Tests output when --fix is used but no fixes are applied."""
         mock_analyze_file.return_value = []
         mock_fix_file.return_value = (False, "", [])
         with patch.object(sys, "argv", ["pyward", fix_flag, temp_python_file]), \
@@ -189,7 +184,7 @@ class TestCLIMain:
 
     @pytest.mark.parametrize("fix_flag", ["-f", "--fix"])
     def test_fix_flag_file_changed(self, temp_python_file, mock_analyze_file, mock_fix_file, fix_flag):
-        """Tests verbose output when there are no issues."""
+        """Tests output when --fix causes changes to the file."""
         mock_analyze_file.return_value = []
         fix_msgs = ["fix message"]
         mock_fix_file.return_value = (True, "new content", fix_msgs)
@@ -204,7 +199,7 @@ class TestCLIMain:
         
     @pytest.mark.parametrize("fix_flag", ["-f", "--fix"])
     def test_fix_flag_with_fix_file_throws(self, temp_python_file, mock_analyze_file, mock_fix_file, fix_flag):
-        """Tests verbose output when there are no issues."""
+        """Tests error handling when fix_file itself raises an exception."""
         err_msg = "something wrong!"
         mock_fix_file.side_effect = Exception(err_msg)
         with patch.object(sys, "argv", ["pyward", fix_flag, temp_python_file]), \
