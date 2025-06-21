@@ -1,6 +1,8 @@
 import ast
 from typing import List
+
 from pyward.format.formatter import format_optimization_warning
+
 
 def check_unreachable_code(tree: ast.AST) -> List[str]:
     issues: List[str] = []
@@ -11,8 +13,7 @@ def check_unreachable_code(tree: ast.AST) -> List[str]:
             if unreachable:
                 issues.append(
                     format_optimization_warning(
-                        "This code is unreachable.",
-                        node.lineno
+                        "This code is unreachable.", node.lineno
                     )
                 )
                 if hasattr(node, "body"):
@@ -20,7 +21,11 @@ def check_unreachable_code(tree: ast.AST) -> List[str]:
                 continue
             if isinstance(node, (ast.Return, ast.Raise, ast.Break, ast.Continue)):
                 unreachable = True
-            for sect in getattr(node, "body", []) + getattr(node, "orelse", []) + getattr(node, "finalbody", []):
+            for sect in (
+                getattr(node, "body", [])
+                + getattr(node, "orelse", [])
+                + getattr(node, "finalbody", [])
+            ):
                 _check_body([sect])
 
     _check_body(tree.body)

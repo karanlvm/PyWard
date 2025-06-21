@@ -1,13 +1,11 @@
 import ast
-import pkgutil
 import importlib
-from typing import List, Tuple
+import pkgutil
 from os import path
+from typing import List, Tuple
 
-def run_all_security_checks(
-    source_code: str,
-    skip: List[str] = None
-) -> List[str]:
+
+def run_all_security_checks(source_code: str, skip: List[str] = None) -> List[str]:
     """
     Dynamically imports every module in pyward.security.rules
     and runs all functions prefixed with `check_`, unless in skip.
@@ -30,7 +28,9 @@ def run_all_security_checks(
     return issues
 
 
-def run_all_security_fixes(source_code: str, skip: List[str] = None) -> Tuple[bool, str, List[str]]:
+def run_all_security_fixes(
+    source_code: str, skip: List[str] = None
+) -> Tuple[bool, str, List[str]]:
     """fix code with fixable security rules, return fix flag and fixed code"""
     skip_set = set(skip or [])
 

@@ -1,6 +1,8 @@
 import ast
 from typing import List
+
 from pyward.format.formatter import format_optimization_warning
+
 
 def check_sort_assignment(tree: ast.AST) -> List[str]:
     issues: List[str] = []
@@ -15,7 +17,7 @@ def check_sort_assignment(tree: ast.AST) -> List[str]:
                 issues.append(
                     format_optimization_warning(
                         "Assignment of list.sort() which returns None. Use sorted(list) instead.",
-                        node.lineno
+                        node.lineno,
                     )
                 )
             self.generic_visit(node)

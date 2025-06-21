@@ -1,8 +1,9 @@
 import ast
-import pkgutil
 import importlib
-from typing import List, Tuple
+import pkgutil
 from os import path
+from typing import List, Tuple
+
 
 def run_all_optimization_checks(source_code: str, skip: List[str] = None) -> List[str]:
     skip = set(skip or [])
@@ -23,7 +24,9 @@ def run_all_optimization_checks(source_code: str, skip: List[str] = None) -> Lis
     return issues
 
 
-def run_all_optimization_fixes(source_code: str, skip: List[str] = None) -> Tuple[bool, str, List[str]]:
+def run_all_optimization_fixes(
+    source_code: str, skip: List[str] = None
+) -> Tuple[bool, str, List[str]]:
     """fix code with fixable optimization rules, return fix flag and fixed code"""
     skip_set = set(skip or [])
 
@@ -47,4 +50,3 @@ def run_all_optimization_fixes(source_code: str, skip: List[str] = None) -> Tupl
                 all_fixes.extend(fixes)
 
     return (file_ever_changed, current_source, all_fixes)
-
