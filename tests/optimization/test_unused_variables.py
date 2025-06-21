@@ -1,8 +1,11 @@
 import ast
-from colorama import Fore, Back, Style
+
+from colorama import Back, Fore, Style
+
 from pyward.optimization.rules.unused_variables import check_unused_variables
 
 OPT = f"{Fore.WHITE}{Back.YELLOW}[Optimization]{Style.RESET_ALL}"
+
 
 def test_detect_unused_variable():
     src = "a = 1\nb = 2\nprint(a)\n"
@@ -11,6 +14,7 @@ def test_detect_unused_variable():
     msg = issues[0]
     assert msg.startswith(OPT)
     assert "Variable 'b' is assigned but never used" in msg
+
 
 def test_ignore_underscore():
     src = "_x = 5\nprint(_x)\ny = 10\n"

@@ -1,6 +1,8 @@
 import ast
 from typing import List
+
 from pyward.format.formatter import format_optimization_warning
+
 
 def check_membership_on_list_in_loop(tree: ast.AST) -> List[str]:
     issues: List[str] = []
@@ -22,12 +24,14 @@ def check_membership_on_list_in_loop(tree: ast.AST) -> List[str]:
         def visit_Compare(self, node):
             if self.in_loop:
                 for op, comp in zip(node.ops, node.comparators):
-                    if isinstance(op, (ast.In, ast.NotIn)) and isinstance(comp, ast.Name):
+                    if isinstance(op, (ast.In, ast.NotIn)) and isinstance(
+                        comp, ast.Name
+                    ):
                         expr = ast.unparse(node)
                         issues.append(
                             format_optimization_warning(
                                 f"Membership test '{expr}' inside loop. Consider converting '{comp.id}' to set for faster lookups.",
-                                node.lineno
+                                node.lineno,
                             )
                         )
             self.generic_visit(node)

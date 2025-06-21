@@ -1,8 +1,11 @@
 import ast
-from colorama import Fore, Back, Style
+
+from colorama import Back, Fore, Style
+
 from pyward.optimization.rules.unused_imports import check_unused_imports
 
 OPT = f"{Fore.WHITE}{Back.YELLOW}[Optimization]{Style.RESET_ALL}"
+
 
 def test_single_unused():
     src = "import os\nimport sys\nprint(os.getcwd())\n"
@@ -11,6 +14,7 @@ def test_single_unused():
     msg = issues[0]
     assert msg.startswith(OPT)
     assert "Imported name 'sys' is never used" in msg
+
 
 def test_no_unused():
     src = "import math\nx = math.pi\n"

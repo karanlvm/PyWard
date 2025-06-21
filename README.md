@@ -40,6 +40,9 @@ pyward <file_or_directory>
 - `-v, --verbose`  
   Show detailed warnings even if no issues are found.
 
+- `--version`
+  Show the PyWard version and exit.
+
 ### Available Checks
 
 #### Optimization Checks

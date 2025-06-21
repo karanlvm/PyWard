@@ -1,6 +1,8 @@
 import ast
 from typing import List
+
 from pyward.format.formatter import format_optimization_warning
+
 
 def check_len_call_in_loop(tree: ast.AST) -> List[str]:
     issues: List[str] = []
@@ -20,11 +22,15 @@ def check_len_call_in_loop(tree: ast.AST) -> List[str]:
             self.in_loop = prev
 
         def visit_Call(self, node):
-            if self.in_loop and isinstance(node.func, ast.Name) and node.func.id == "len":
+            if (
+                self.in_loop
+                and isinstance(node.func, ast.Name)
+                and node.func.id == "len"
+            ):
                 issues.append(
                     format_optimization_warning(
                         "Call to len() inside loop. Consider storing the length in a variable before the loop.",
-                        node.lineno
+                        node.lineno,
                     )
                 )
             self.generic_visit(node)

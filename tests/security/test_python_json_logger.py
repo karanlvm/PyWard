@@ -1,5 +1,8 @@
 import ast
-from pyward.security.rules.python_json_logger import check_python_json_logger_import
+
+from pyward.security.rules.python_json_logger import \
+    check_python_json_logger_import
+
 
 def test_detect_import_and_from():
     src = "import python_json_logger\nfrom python_json_logger import Foo\n"

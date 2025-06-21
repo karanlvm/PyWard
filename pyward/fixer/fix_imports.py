@@ -1,12 +1,13 @@
 import ast
-from typing import List, Optional, Tuple, Set, Dict
 import re
 from dataclasses import dataclass
+from typing import Dict, List, Optional, Set, Tuple
 
 
 @dataclass
 class ImportInfo:
     """Information about an import statement."""
+
     node: ast.AST
     names: List[str]
     aliases: Dict[str, str]
@@ -19,7 +20,7 @@ class ImportInfo:
     def __eq__(self, value: object) -> bool:
         """eq for the same object"""
         return value == self
-    
+
     def __hash__(self) -> int:
         """same object with same hash value"""
         return 13 * hash(self.lineno) + hash(self.module)
@@ -27,13 +28,13 @@ class ImportInfo:
 
 class ImportFixer:
     """Fixes unused imports by removing them from the source code."""
-    
+
     def __init__(self, source_code: str):
         self.source_code = source_code
         self.parsed_source = self._preprocess_source(source_code)
         self.tree = ast.parse(self.parsed_source)
-        self.unused_names_in_import: Set[Tuple[str, ImportInfo]] = set()  
-        self.imports: Dict[int, ImportInfo] = {}  
+        self.unused_names_in_import: Set[Tuple[str, ImportInfo]] = set()
+        self.imports: Dict[int, ImportInfo] = {}
         self.lines = self.source_code.splitlines()
         self._collect_imports()
         self._find_unused_imports()
@@ -43,31 +44,33 @@ class ImportFixer:
         lines = source.splitlines()
         result = []
         for line in lines:
-            if not line.strip().startswith('from') and not line.strip().startswith('import'):
-                result.append(line)
-                continue
-                
-            if '(' in line: 
+            if not line.strip().startswith("from") and not line.strip().startswith(
+                "import"
+            ):
                 result.append(line)
                 continue
 
-            if line.rstrip().endswith(','):
-                if line.strip().startswith('from'):
-                    result.append(re.sub(r'import\s+(.+?),\s*$', r'import (\1)', line))
+            if "(" in line:
+                result.append(line)
+                continue
+
+            if line.rstrip().endswith(","):
+                if line.strip().startswith("from"):
+                    result.append(re.sub(r"import\s+(.+?),\s*$", r"import (\1)", line))
                 else:
-                    result.append(re.sub(r'import\s+(.+?),\s*$', r'import (\1)', line))
+                    result.append(re.sub(r"import\s+(.+?),\s*$", r"import (\1)", line))
             else:
                 result.append(line)
-        return '\n'.join(result)
+        return "\n".join(result)
 
     def _find_multiline_import_end(self, start_line: int) -> Optional[int]:
         """Find the end line of a multiline import."""
-        if '(' not in self.lines[start_line - 1]:
+        if "(" not in self.lines[start_line - 1]:
             return None
-            
+
         level = 0
-        for i, line in enumerate(self.lines[start_line - 1:], start=start_line):
-            level += line.count('(') - line.count(')')
+        for i, line in enumerate(self.lines[start_line - 1 :], start=start_line):
+            level += line.count("(") - line.count(")")
             if level == 0:
                 return i
         return None
@@ -75,7 +78,7 @@ class ImportFixer:
     def _collect_imports(self) -> None:
         """Collect all import statements and their information."""
         for node in ast.walk(self.tree):
-            if not hasattr(node, 'lineno'):
+            if not hasattr(node, "lineno"):
                 continue
 
             end_lineno = self._find_multiline_import_end(node.lineno)
@@ -87,14 +90,14 @@ class ImportFixer:
                     names.append(base_name)
                     if alias.asname:
                         aliases[base_name] = alias.asname
-                
+
                 self.imports[node.lineno] = ImportInfo(
                     node=node,
                     names=names,
                     aliases=aliases,
                     lineno=node.lineno,
                     end_lineno=end_lineno,
-                    is_from=False
+                    is_from=False,
                 )
 
             elif isinstance(node, ast.ImportFrom):
@@ -104,7 +107,7 @@ class ImportFixer:
                     names.append(alias.name)
                     if alias.asname:
                         aliases[alias.name] = alias.asname
-                
+
                 self.imports[node.lineno] = ImportInfo(
                     node=node,
                     names=names,
@@ -113,7 +116,7 @@ class ImportFixer:
                     end_lineno=end_lineno,
                     is_from=True,
                     module=node.module,
-                    level=node.level
+                    level=node.level,
                 )
 
     def _find_unused_imports(self) -> None:
@@ -134,46 +137,48 @@ class ImportFixer:
         if not info.end_lineno:
             return []
 
-        original_lines = self.lines[info.lineno - 1:info.end_lineno]
+        original_lines = self.lines[info.lineno - 1 : info.end_lineno]
         result = []
-        header = original_lines[0] 
+        header = original_lines[0]
         result.append(header)
 
         unused_names = [n[0] for n in self.unused_names_in_import]
         used_names = set(n for n in info.names if n not in unused_names)
-        
-        for line in original_lines[1:-1]:  
+
+        for line in original_lines[1:-1]:
             stripped = line.strip()
-            if not stripped:  
+            if not stripped:
                 result.append(line)
                 continue
-            
-            if stripped.startswith('#'): 
+
+            if stripped.startswith("#"):
                 result.append(line)
                 continue
-        
-            parts = line.rstrip().split('#', 1)
+
+            parts = line.rstrip().split("#", 1)
             code_part = parts[0].rstrip()
             comment_part = f"  # {parts[1].strip()}" if len(parts) > 1 else ""
-            
-            indentation = line[:len(line) - len(line.lstrip())]
-            
-            name = code_part.strip().rstrip(',').strip()
-            
+
+            indentation = line[: len(line) - len(line.lstrip())]
+
+            name = code_part.strip().rstrip(",").strip()
+
             if name in used_names:
-                result.append(f"{indentation}{name}{',' if code_part.rstrip().endswith(',') else ''}{comment_part}")
-        
-        result.append(original_lines[-1]) 
+                result.append(
+                    f"{indentation}{name}{',' if code_part.rstrip().endswith(',') else ''}{comment_part}"
+                )
+
+        result.append(original_lines[-1])
         return result
 
     def _fix_simple_import(self, info: ImportInfo) -> Optional[str]:
         """Fix a single-line import statement."""
         unused_names = [n[0] for n in self.unused_names_in_import]
         used_names = [n for n in info.names if n not in unused_names]
-        
+
         if not used_names:
             return None
-            
+
         if info.is_from:
             names_str = ", ".join(
                 f"{name} as {info.aliases[name]}" if name in info.aliases else name
@@ -196,10 +201,10 @@ class ImportFixer:
         unused_names = [n[0] for n in self.unused_names_in_import]
         for lineno in sorted(self.imports.keys(), reverse=True):
             info = self.imports[lineno]
-            
+
             if all(name in unused_names for name in info.names):
                 if info.end_lineno:
-                    del result_lines[info.lineno - 1:info.end_lineno]
+                    del result_lines[info.lineno - 1 : info.end_lineno]
                 else:
                     del result_lines[info.lineno - 1]
                 continue
@@ -209,7 +214,7 @@ class ImportFixer:
 
             if info.end_lineno:
                 fixed_lines = self._fix_multiline_import(info)
-                result_lines[info.lineno - 1:info.end_lineno] = fixed_lines
+                result_lines[info.lineno - 1 : info.end_lineno] = fixed_lines
             else:
                 fixed = self._fix_simple_import(info)
                 if fixed:

@@ -1,6 +1,8 @@
 import ast
 from typing import List
+
 from pyward.format.formatter import format_security_warning
+
 
 def check_exec_eval_usage(tree: ast.AST) -> List[str]:
     """
@@ -20,7 +22,7 @@ def check_exec_eval_usage(tree: ast.AST) -> List[str]:
                         "This can lead to code injection (e.g. CVE-2025-3248). "
                         "Consider safer alternatives (e.g., ast.literal_eval) or explicit parsing.",
                         node.lineno,
-                        "CVE-2025-3248"
+                        "CVE-2025-3248",
                     )
                 )
             self.generic_visit(node)

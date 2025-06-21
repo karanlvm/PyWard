@@ -1,6 +1,8 @@
 import ast
-from typing import List, Dict
+from typing import Dict, List
+
 from pyward.format.formatter import format_optimization_warning
+
 
 def check_unused_variables(tree: ast.AST) -> List[str]:
     issues: List[str] = []
@@ -46,15 +48,15 @@ def check_unused_variables(tree: ast.AST) -> List[str]:
     AssignVisitor().visit(tree)
 
     used_names = {
-        n.id for n in ast.walk(tree)
+        n.id
+        for n in ast.walk(tree)
         if isinstance(n, ast.Name) and isinstance(n.ctx, ast.Load)
     }
     for name, lineno in assigned_names.items():
         if not name.startswith("_") and name not in used_names:
             issues.append(
                 format_optimization_warning(
-                    f"Variable '{name}' is assigned but never used.",
-                    lineno
+                    f"Variable '{name}' is assigned but never used.", lineno
                 )
             )
     return issues
