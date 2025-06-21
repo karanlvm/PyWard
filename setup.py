@@ -4,9 +4,17 @@ import pathlib
 HERE = pathlib.Path(__file__).parent
 README = (HERE / "README.md").read_text(encoding="utf-8")
 
+def get_version():
+    version_file = HERE / "pyward" / "__init__.py"
+    for line in version_file.read_text().splitlines():
+        if line.startswith("__version__"):
+            delim = '"' if '"' in line else "'"
+            return line.split(delim)[1]
+    raise RuntimeError("Version not found")
+
 setup(
     name="pyward-cli",
-    version="0.2.1",
+    version=get_version(),
     description="A CLI linter for Python that flags optimization and security issues",
     long_description=README,
     long_description_content_type="text/markdown",

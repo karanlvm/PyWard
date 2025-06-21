@@ -15,6 +15,7 @@ from pyward.security.run import (
 )
 from pyward.rule_finder import find_rule_files
 
+from pyward import __version__ as VERSION
 
 def fix_file(
     source: str,
@@ -161,12 +162,25 @@ def main():
         help="Verbose output, even if no issues.",
     )
     parser.add_argument(
+        "--version",
+        action="store_true",
+        help="Show PyWard version and exit.",
+    )
+    parser.add_argument(
         "filepath",
         type=Path,
+        nargs="?",
         help="Path to the Python file or directory to analyze.",
     )
 
     args = parser.parse_args()
+
+    if args.version:
+        print(f"PyWard Version {VERSION}")
+        sys.exit(0)
+
+    if args.filepath is None:
+        parser.error("the following arguments are required: filepath")
 
     # Build list of files
     paths: list[Path] = []
