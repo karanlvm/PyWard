@@ -150,6 +150,8 @@ def generate_import_clause(line_no: int, import_info: ImportInfo) -> str:
         if import_info.lineno == import_info.end_lineno:
             return f"from {import_info.module} import {', '.join([name[1] + ' as ' + name[0] if name[0] else name[1] for name in import_info.names_in_use])}"
         else:
-            return f"from {import_info.module} import (\n    {',\n    '.join([name[1] + ' as ' + name[0] if name[0] else name[1] for name in import_info.names_in_use])}\n)"
+            new_line = '\n'
+            trailing = ',\n    '
+            return f"from {import_info.module} import ({new_line}    {trailing.join([name[1] + ' as ' + name[0] if name[0] else name[1] for name in import_info.names_in_use])}{new_line})"
     else:
         return f"import {', '.join([name[1] + ' as ' + name[0] if name[0] else name[1] for name in import_info.names_in_use])}"
