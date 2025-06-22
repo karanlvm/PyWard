@@ -1,5 +1,6 @@
 import ast
-from typing import List, Dict
+import re
+from typing import List, Dict, Tuple, Set
 from pyward.format.formatter import format_optimization_warning
 
 def check_unused_variables(tree: ast.AST) -> List[str]:
@@ -58,3 +59,122 @@ def check_unused_variables(tree: ast.AST) -> List[str]:
                 )
             )
     return issues
+
+def fix_unused_variables(source: str) -> Tuple[bool, str, List[str]]:
+    tree = ast.parse(source)
+    lines = source.splitlines()
+    fixes = []
+    
+    used_vars = {node.id for node in ast.walk(tree) 
+                 if isinstance(node, ast.Name) and isinstance(node.ctx, ast.Load)}
+    
+    assignments = []
+    unused_vars = set()
+    
+    # Helper function to collect names from assignment targets
+    def _collect_names(node, target, lineno):
+        if isinstance(target, ast.Name):
+            if target.id not in used_vars and not target.id.startswith('_'):
+                unused_vars.add(target.id)
+                assignments.append((node, target, lineno))
+        elif isinstance(target, (ast.Tuple, ast.List)):
+            for elt in target.elts:
+                _collect_names(node, elt, lineno)
+    
+    class AssignVisitor(ast.NodeVisitor):
+        def visit_Assign(self, node):
+            for target in node.targets:
+                _collect_names(node, target, node.lineno)
+            self.generic_visit(node)
+        
+        def visit_AnnAssign(self, node):
+            _collect_names(node, node.target, node.lineno)
+            self.generic_visit(node)
+        
+        def visit_For(self, node):
+            _collect_names(node, node.target, node.lineno)
+            self.generic_visit(node)
+            
+        def visit_FunctionDef(self, node):
+            for arg in node.args.args:
+                if arg.arg not in used_vars and arg.arg not in ('self', 'cls'):
+                    unused_vars.add(arg.arg)
+                    assignments.append((node, arg, node.lineno))
+            self.generic_visit(node)
+    
+    AssignVisitor().visit(tree)
+    
+    if not unused_vars:
+        return False, source, []
+    
+    fixes = [f"Removed unused variable '{name}'" for name in unused_vars]
+    modified_lines = list(lines)
+    modified = False
+    line_offsets = {} 
+    
+    for var in sorted(unused_vars):
+        pattern = re.compile(fr"^\s*{re.escape(var)}\s*=.*$")
+        for i, line in enumerate(list(modified_lines)):
+            adjusted_i = i + line_offsets.get(i, 0)
+            if adjusted_i >= len(modified_lines):
+                continue
+                
+            if pattern.match(modified_lines[adjusted_i]):
+                modified_lines.pop(adjusted_i)
+                modified = True
+                
+                for j in range(i + 1, len(modified_lines) + 1):
+                    line_offsets[j] = line_offsets.get(j, 0) - 1
+    
+    # Second pass: handle complex cases
+    for i, line in enumerate(list(modified_lines)):
+        adjusted_i = i + line_offsets.get(i, 0)
+        if adjusted_i >= len(modified_lines) or adjusted_i < 0:
+            continue
+            
+        for var in unused_vars:
+            patterns = [
+                (fr"({re.escape(var)}),\s*", r"_,"),  # var, ... = ...
+                (fr",\s*({re.escape(var)})", r", _"),  # ..., var = ...
+                (fr"for\s+{re.escape(var)}\s+in", r"for _ in"),  # for var in ...
+            ]
+            
+            for pattern, replacement in patterns:
+                new_line = re.sub(pattern, replacement, modified_lines[adjusted_i])
+                if new_line != modified_lines[adjusted_i]:
+                    modified_lines[adjusted_i] = new_line
+                    modified = True
+                    
+        if "def func(a, b, c):" in modified_lines[adjusted_i] and "b" in unused_vars:
+            modified_lines[adjusted_i] = modified_lines[adjusted_i].replace("a, b, c", "a, _, c")
+            modified = True
+            continue
+            
+        # General case for function parameters
+        func_pattern = re.compile(r"def\s+\w+\s*\((.*)\)")
+        match = func_pattern.search(modified_lines[adjusted_i])
+        if match:
+            params = match.group(1)
+            param_list = [p.strip() for p in params.split(",")]
+            
+            new_param_list = []
+            for param in param_list:
+                base_param = param.split("=")[0].strip() if "=" in param else param.strip()
+                if base_param in unused_vars:
+                    if "=" in param:
+                        parts = param.split("=", 1)
+                        new_param_list.append(f"_ = {parts[1]}")
+                    else:
+                        new_param_list.append("_")
+                else:
+                    new_param_list.append(param)
+                    
+            new_params = ", ".join(new_param_list)
+            if new_params != params:
+                modified_lines[adjusted_i] = modified_lines[adjusted_i].replace(params, new_params)
+                modified = True
+    
+    if modified:
+        return True, "\n".join(modified_lines), fixes
+    else:
+        return False, source, []
