@@ -1,6 +1,8 @@
 import ast
-from typing import List, Dict
+from typing import Dict, List
+
 from pyward.format.formatter import format_optimization_warning
+
 
 def check_list_build_then_copy(tree: ast.AST) -> List[str]:
     issues: List[str] = []
@@ -16,14 +18,15 @@ def check_list_build_then_copy(tree: ast.AST) -> List[str]:
                     isinstance(node.value, ast.Subscript)
                     and isinstance(node.value.value, ast.Name)
                     and isinstance(node.value.slice, ast.Slice)
-                    and node.value.slice.lower is None and node.value.slice.upper is None
+                    and node.value.slice.lower is None
+                    and node.value.slice.upper is None
                 ):
                     src = node.value.value.id
                     if src in empties:
                         issues.append(
                             format_optimization_warning(
                                 f"List '{src}' is built via append then copied with slice. Consider using a list comprehension.",
-                                node.lineno
+                                node.lineno,
                             )
                         )
             self.generic_visit(node)

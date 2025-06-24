@@ -40,6 +40,9 @@ pyward <file_or_directory>
 - `-v, --verbose`  
   Show detailed warnings even if no issues are found.
 
+- `--version`
+  Show the PyWard version and exit.
+
 ### Available Checks
 
 #### Optimization Checks
@@ -147,6 +150,13 @@ MIT License — see [LICENSE](LICENSE).
     </td>
 </tr>
 <tr>
+    <td align="center" style="word-wrap: break-word; width: 150.0; height: 150.0">
+        <a href=https://github.com/aoliveir1>
+            <img src=https://avatars.githubusercontent.com/u/20012864?v=4 width="100;"  style="border-radius:50%;align-items:center;justify-content:center;overflow:hidden;padding-top:10px" alt=André/>
+            <br />
+            <sub style="font-size:14px"><b>André</b></sub>
+        </a>
+    </td>
     <td align="center" style="word-wrap: break-word; width: 150.0; height: 150.0">
         <a href=https://github.com/nayanaaj9>
             <img src=https://avatars.githubusercontent.com/u/215096912?v=4 width="100;"  style="border-radius:50%;align-items:center;justify-content:center;overflow:hidden;padding-top:10px" alt=Nayana Jagadeesh/>

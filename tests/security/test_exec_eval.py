@@ -1,8 +1,11 @@
 import ast
-from colorama import Fore, Back, Style
+
+from colorama import Back, Fore, Style
+
 from pyward.security.rules.exec_eval import check_exec_eval_usage
 
 SEC = f"{Fore.WHITE}{Back.RED}[Security]{Style.RESET_ALL}"
+
 
 def test_detect_eval_and_exec():
     src = "eval('2+2')\nexec('print(1)')\n"

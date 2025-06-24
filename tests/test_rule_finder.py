@@ -11,11 +11,15 @@ from pyward.rule_finder import extract_function_info, find_rule_files
 
 
 def test_extract_function_info_basic_warning():
-    code = textwrap.dedent("""
+    code = textwrap.dedent(
+        """
         def example():
             format_optimization_warning("This is an optimization issue.", 42, "CVE-1234")
-    """)
-    with tempfile.NamedTemporaryFile(suffix=".py", mode="w+", delete=False) as temp_file:
+    """
+    )
+    with tempfile.NamedTemporaryFile(
+        suffix=".py", mode="w+", delete=False
+    ) as temp_file:
         temp_file.write(code)
         temp_file.flush()
         temp_path = temp_file.name
@@ -26,11 +30,15 @@ def test_extract_function_info_basic_warning():
 
 
 def test_extract_function_info_no_warning():
-    code = textwrap.dedent("""
+    code = textwrap.dedent(
+        """
         def example():
             print("This is a normal print.")
-    """)
-    with tempfile.NamedTemporaryFile(suffix=".py", mode="w+", delete=False) as temp_file:
+    """
+    )
+    with tempfile.NamedTemporaryFile(
+        suffix=".py", mode="w+", delete=False
+    ) as temp_file:
         temp_file.write(code)
         temp_file.flush()
         temp_path = temp_file.name
@@ -49,15 +57,12 @@ def mock_rule_package(tmp_path):
 
     file1 = mock_package / "rule1.py"
     file1.write_text(
-        'def f():\n'
+        "def f():\n"
         '    format_optimization_warning("Unused import.", 12, "CVE-1234")\n'
     )
 
     file2 = mock_package / "rule2.py"
-    file2.write_text(
-        'def f():\n'
-        '    pass\n'
-    )
+    file2.write_text("def f():\n" "    pass\n")
 
     init_file = mock_package / "__init__.py"
     init_file.write_text("")
@@ -89,6 +94,7 @@ def test_find_rule_files(monkeypatch, mock_rule_package):
 
                 def __exit__(self, exc_type, exc_val, exc_tb):
                     pass
+
             return Context()
 
     monkeypatch.setattr("importlib.resources.files", DummyResources.files)

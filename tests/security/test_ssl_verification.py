@@ -1,9 +1,11 @@
 # tests/test_ssl_verification_disabled.py
 
 import ast
+
 import pytest
 
-from pyward.security.rules.ssl_verification import check_ssl_verification_disabled
+from pyward.security.rules.ssl_verification import \
+    check_ssl_verification_disabled
 
 
 def _parse_source(src: str) -> ast.AST:
@@ -56,11 +58,14 @@ response = session.get("https://example.com", verify=False)
     assert "Line 4" in issues[0]
 
 
-@pytest.mark.parametrize("call", [
-    'requests.get("https://example.com")',
-    'requests.post("https://example.com", data=data, verify=True)',
-    'session.get("https://example.com")',
-])
+@pytest.mark.parametrize(
+    "call",
+    [
+        'requests.get("https://example.com")',
+        'requests.post("https://example.com", data=data, verify=True)',
+        'session.get("https://example.com")',
+    ],
+)
 def test_no_issues_when_verify_true_or_omitted(call):
     source = f"""
 import requests

@@ -1,19 +1,15 @@
 #!/usr/bin/env python3
-import os
 import argparse
+import os
 import sys
 from pathlib import Path
 from typing import Tuple
 
-from pyward.optimization.run import (
-    run_all_optimization_checks,
-    run_all_optimization_fixes,
-)
-from pyward.security.run import (
-    run_all_security_checks,
-    run_all_security_fixes,
-)
+from pyward import __version__ as VERSION
+from pyward.optimization.run import (run_all_optimization_checks,
+                                     run_all_optimization_fixes)
 from pyward.rule_finder import find_rule_files
+from pyward.security.run import run_all_security_checks, run_all_security_fixes
 
 
 def fix_file(
@@ -60,14 +56,10 @@ def analyze_file(
     issues: list[str] = []
 
     if run_optimization:
-        issues.extend(
-            run_all_optimization_checks(source, skip=skip_list)
-        )
+        issues.extend(run_all_optimization_checks(source, skip=skip_list))
 
     if run_security:
-        issues.extend(
-            run_all_security_checks(source, skip=skip_list)
-        )
+        issues.extend(run_all_security_checks(source, skip=skip_list))
 
     return issues
 
@@ -104,7 +96,8 @@ def main():
 
     # Only show ASCII logo when running in a real terminal
     if sys.stdout.isatty():
-        print(r"""
+        print(
+            r"""
  ____      __        __            _ 
 |  _ \ _   \ \      / /_ _ _ __ __| |
 | |_) | | | \ \ /\ / / _` | '__/ _` |
@@ -112,7 +105,8 @@ def main():
 |_|    \__, | \_/\_/ \__,_|_|  \__,_|
         |___/                         
         PyWard: fast, zero-config Python linting
-""")
+"""
+        )
 
     parser = ArgumentParser1(
         prog="pyward",
@@ -161,12 +155,25 @@ def main():
         help="Verbose output, even if no issues.",
     )
     parser.add_argument(
+        "--version",
+        action="store_true",
+        help="Show PyWard version and exit.",
+    )
+    parser.add_argument(
         "filepath",
         type=Path,
+        nargs="?",
         help="Path to the Python file or directory to analyze.",
     )
 
     args = parser.parse_args()
+
+    if args.version:
+        print(f"PyWard Version {VERSION}")
+        sys.exit(0)
+
+    if args.filepath is None:
+        parser.error("the following arguments are required: filepath")
 
     # Build list of files
     paths: list[Path] = []
@@ -206,9 +213,7 @@ def main():
 
             # apply fixes first, if requested
             if args.fix:
-                changed, new_src, fixes = fix_file(
-                    source, run_opt, run_sec, skip_list
-                )
+                changed, new_src, fixes = fix_file(source, run_opt, run_sec, skip_list)
                 if changed:
                     print(f"\n🔧 Applied {len(fixes)} fix(es) to {file_str}")
                     for idx, msg in enumerate(fixes, 1):
