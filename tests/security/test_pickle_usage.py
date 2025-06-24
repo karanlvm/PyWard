@@ -1,5 +1,7 @@
 import ast
+
 from pyward.security.rules.pickle_usage import check_pickle_usage
+
 
 def test_detect_load_and_loads():
     src = "import pickle\npickle.load(f)\npickle.loads(b'')\n"

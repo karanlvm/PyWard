@@ -1,8 +1,8 @@
-from colorama import Fore, Back, Style
+from colorama import Back, Fore, Style
 
 
-def format_security_warning(message: str, lineno: int, cve_id: str = '') -> str:
-    cve_format = f"{Fore.RED}[{cve_id}]{Style.RESET_ALL}" if cve_id != '' else ''
+def format_security_warning(message: str, lineno: int, cve_id: str = "") -> str:
+    cve_format = f"{Fore.RED}[{cve_id}]{Style.RESET_ALL}" if cve_id != "" else ""
     return (
         f"{Fore.WHITE}{Back.RED}[Security]{Style.RESET_ALL}"
         f"{cve_format}"

@@ -4,6 +4,7 @@ from typing import List
 from pyward.optimization.run import run_all_optimization_checks
 from pyward.security.run import run_all_security_checks
 
+
 def analyze_file(
     filepath: str,
     run_optimization: bool = True,

@@ -1,6 +1,8 @@
 import ast
 from typing import List
+
 from pyward.format.formatter import format_optimization_warning
+
 
 def check_set_comprehension(tree: ast.AST) -> List[str]:
     issues: List[str] = []
@@ -20,12 +22,16 @@ def check_set_comprehension(tree: ast.AST) -> List[str]:
             self.in_loop = prev
 
         def visit_Call(self, node):
-            if self.in_loop and isinstance(node.func, ast.Attribute) and node.func.attr == "add":
+            if (
+                self.in_loop
+                and isinstance(node.func, ast.Attribute)
+                and node.func.attr == "add"
+            ):
                 sname = node.func.value.id  # type: ignore
                 issues.append(
                     format_optimization_warning(
                         f"Building set '{sname}' via add() in loop. Consider using set comprehension.",
-                        node.lineno
+                        node.lineno,
                     )
                 )
             self.generic_visit(node)
