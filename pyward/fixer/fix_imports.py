@@ -1,29 +1,29 @@
 import ast
-import re
-from dataclasses import dataclass
-from typing import Dict, List, Optional, Set, Tuple
+from typing import List, Tuple, Dict, Optional
+from dataclasses import dataclass, field
 
 
 @dataclass
 class ImportInfo:
     """Information about an import statement."""
-
     node: ast.AST
-    names: List[str]
-    aliases: Dict[str, str]
+    alias_name_pairs: List[Tuple[Optional[str], str]]
     lineno: int
-    end_lineno: Optional[int]  # For multiline imports
-    is_from: bool
+    col_offset: int
+    end_lineno: int
+    end_col_offset: int
+    is_from: bool = False
     module: Optional[str] = None
-    level: int = 0
+    names_in_use: List[Tuple[str, str]] = field(default_factory=list)
+    names_unused: List[Tuple[str, str]] = field(default_factory=list)
 
     def __eq__(self, value: object) -> bool:
         """eq for the same object"""
         return value == self
-
+    
     def __hash__(self) -> int:
         """same object with same hash value"""
-        return 13 * hash(self.lineno) + hash(self.module)
+        return hash((self.lineno, self.col_offset, self.end_lineno, self.end_col_offset))
 
 
 class ImportFixer:
@@ -31,212 +31,120 @@ class ImportFixer:
 
     def __init__(self, source_code: str):
         self.source_code = source_code
-        self.parsed_source = self._preprocess_source(source_code)
-        self.tree = ast.parse(self.parsed_source)
-        self.unused_names_in_import: Set[Tuple[str, ImportInfo]] = set()
-        self.imports: Dict[int, ImportInfo] = {}
-        self.lines = self.source_code.splitlines()
-        self._collect_imports()
-        self._find_unused_imports()
+        self.tree = ast.parse(self.source_code)
 
-    def _preprocess_source(self, source: str) -> str:
-        """Convert trailing comma imports to valid syntax for parsing."""
-        lines = source.splitlines()
-        result = []
-        for line in lines:
-            if not line.strip().startswith("from") and not line.strip().startswith(
-                "import"
-            ):
-                result.append(line)
-                continue
+    def collect_imports(self) -> List[ImportInfo]:
+        imports: List[ImportInfo] = list()
+        name_to_import: Dict[Tuple[str, str], ImportInfo] = dict()
 
-            if "(" in line:
-                result.append(line)
-                continue
-
-            if line.rstrip().endswith(","):
-                if line.strip().startswith("from"):
-                    result.append(re.sub(r"import\s+(.+?),\s*$", r"import (\1)", line))
-                else:
-                    result.append(re.sub(r"import\s+(.+?),\s*$", r"import (\1)", line))
-            else:
-                result.append(line)
-        return "\n".join(result)
-
-    def _find_multiline_import_end(self, start_line: int) -> Optional[int]:
-        """Find the end line of a multiline import."""
-        if "(" not in self.lines[start_line - 1]:
-            return None
-
-        level = 0
-        for i, line in enumerate(self.lines[start_line - 1 :], start=start_line):
-            level += line.count("(") - line.count(")")
-            if level == 0:
-                return i
-        return None
-
-    def _collect_imports(self) -> None:
-        """Collect all import statements and their information."""
         for node in ast.walk(self.tree):
-            if not hasattr(node, "lineno"):
+            if (not isinstance(node, ast.Import)) and (not isinstance(node, ast.ImportFrom)):
                 continue
-
-            end_lineno = self._find_multiline_import_end(node.lineno)
-            if isinstance(node, ast.Import):
-                names = []
-                aliases = {}
-                for alias in node.names:
-                    base_name = alias.name.split(".")[0]
-                    names.append(base_name)
-                    if alias.asname:
-                        aliases[base_name] = alias.asname
-
-                self.imports[node.lineno] = ImportInfo(
-                    node=node,
-                    names=names,
-                    aliases=aliases,
-                    lineno=node.lineno,
-                    end_lineno=end_lineno,
-                    is_from=False,
-                )
-
-            elif isinstance(node, ast.ImportFrom):
-                names = []
-                aliases = {}
-                for alias in node.names:
-                    names.append(alias.name)
-                    if alias.asname:
-                        aliases[alias.name] = alias.asname
-
-                self.imports[node.lineno] = ImportInfo(
-                    node=node,
-                    names=names,
-                    aliases=aliases,
-                    lineno=node.lineno,
-                    end_lineno=end_lineno,
-                    is_from=True,
-                    module=node.module,
-                    level=node.level,
-                )
-
-    def _find_unused_imports(self) -> None:
-        """Find which imported names are never used."""
-        used_names = set()
-        for node in ast.walk(self.tree):
-            if isinstance(node, ast.Name) and isinstance(node.ctx, ast.Load):
-                used_names.add(node.id)
-
-        for info in self.imports.values():
-            for name in info.names:
-                alias = info.aliases.get(name, name)
-                if alias not in used_names:
-                    self.unused_names_in_import.add((name, info))
-
-    def _fix_multiline_import(self, info: ImportInfo) -> List[str]:
-        """Fix a multiline import statement while preserving formatting."""
-        if not info.end_lineno:
-            return []
-
-        original_lines = self.lines[info.lineno - 1 : info.end_lineno]
-        result = []
-        header = original_lines[0]
-        result.append(header)
-
-        unused_names = [n[0] for n in self.unused_names_in_import]
-        used_names = set(n for n in info.names if n not in unused_names)
-
-        for line in original_lines[1:-1]:
-            stripped = line.strip()
-            if not stripped:
-                result.append(line)
-                continue
-
-            if stripped.startswith("#"):
-                result.append(line)
-                continue
-
-            parts = line.rstrip().split("#", 1)
-            code_part = parts[0].rstrip()
-            comment_part = f"  # {parts[1].strip()}" if len(parts) > 1 else ""
-
-            indentation = line[: len(line) - len(line.lstrip())]
-
-            name = code_part.strip().rstrip(",").strip()
-
-            if name in used_names:
-                result.append(
-                    f"{indentation}{name}{',' if code_part.rstrip().endswith(',') else ''}{comment_part}"
-                )
-
-        result.append(original_lines[-1])
-        return result
-
-    def _fix_simple_import(self, info: ImportInfo) -> Optional[str]:
-        """Fix a single-line import statement."""
-        unused_names = [n[0] for n in self.unused_names_in_import]
-        used_names = [n for n in info.names if n not in unused_names]
-
-        if not used_names:
-            return None
-
-        if info.is_from:
-            names_str = ", ".join(
-                f"{name} as {info.aliases[name]}" if name in info.aliases else name
-                for name in used_names
+            import_info = ImportInfo(
+                node = node,
+                alias_name_pairs = [(alias.asname, alias.name) for alias in node.names],
+                lineno = node.lineno,
+                col_offset = node.col_offset,
+                end_lineno = node.end_lineno,
+                end_col_offset = node.end_col_offset,
             )
-            return f"from {info.module} import {names_str}"
+            if (isinstance(node, ast.ImportFrom)):
+                import_info.is_from = True
+                import_info.module = node.module
+
+            imports.append(import_info)
+            for alias in node.names:
+                name_to_import[(alias.asname, alias.name)] = import_info
+
+        if not name_to_import:
+            return imports
+
+        used_names = {n.id for n in ast.walk(self.tree) if isinstance(n, ast.Name)}
+        for name, import_info in name_to_import.items():
+            if (name[0] if name[0] else name[1]) in used_names:
+                import_info.names_in_use.append(name)
+            else:
+                import_info.names_unused.append(name)
+
+        return imports
+
+
+    def fix(self) -> Tuple[bool, str, List[str]]:
+        imports: List[ImportInfo] = self.collect_imports()
+
+        def get_msg(name: Tuple[str, str], item: ImportInfo) -> str:
+            return f"from {item.module} import {name[1] + ' as ' + name[0] if name[0] else name[1]} deleted" \
+                if item.is_from else f"import {name[1] + ' as ' + name[0] if name[0] else name[1]} deleted"
+
+        fixes = [get_msg(name, item) for item in imports for name in item.names_unused]
+
+        if not fixes:
+            return (False, self.source_code, [])    
+
+        return (True, self.__fix_unused_imports(imports), fixes)
+
+
+    def __fix_unused_imports(self, imports: List[ImportInfo]) -> str:
+        line_to_import: Dict[int, List[ImportInfo]] = dict()
+        for import_info in imports:
+            if not import_info.names_unused:
+                continue
+            for line_no in range(import_info.lineno, import_info.end_lineno + 1):
+                line_to_import.setdefault(line_no, list()).append(import_info)
+
+        lines: List[str] = self.source_code.splitlines()
+        new_lines: List[str] = []
+
+        for line_no, line in enumerate(lines, start=1):
+            imports_to_fix: List[ImportInfo] = line_to_import.get(line_no, [])
+            if not imports_to_fix:
+                new_lines.append(line)
+                continue
+            
+            new_line: str = ""
+            prev_import_range: Optional[Tuple[int, int]] = None
+            for import_info in imports_to_fix:
+                range_pair: Tuple[int, int] = self.get_range(import_info, line_no, line)
+                if not prev_import_range:
+                    new_line += line[0: range_pair[0]]
+                else:
+                    new_line += line[prev_import_range[1]: range_pair[0]]
+                prev_import_range = range_pair
+                new_line += self.generate_import_clause(line_no, import_info)
+
+            if ((line == "") or (new_line != "")):
+                new_lines.append(new_line)
+
+        return "\n".join(new_lines) + "\n"
+
+
+    def get_range(self, import_info: ImportInfo, line_no: int, line: str) -> Tuple[int, int]:
+        """Get the range of the import statement in current line."""
+        start_lineno = import_info.lineno
+        end_lineno = import_info.end_lineno
+        if start_lineno == end_lineno:
+            return (import_info.col_offset, import_info.end_col_offset)
+
+        if start_lineno == line_no:
+            return (import_info.col_offset, len(line))
+        elif end_lineno == line_no:
+            return (0, import_info.end_col_offset)
         else:
-            names_str = ", ".join(
-                f"{name} as {info.aliases[name]}" if name in info.aliases else name
-                for name in used_names
-            )
-            return f"import {names_str}"
+            return (0, len(line))
 
-    def fix(self) -> str:
-        """Apply fixes and return the modified source code."""
-        if not self.unused_names_in_import:
-            return self.source_code
 
-        result_lines = self.lines.copy()
-        unused_names = [n[0] for n in self.unused_names_in_import]
-        for lineno in sorted(self.imports.keys(), reverse=True):
-            info = self.imports[lineno]
-
-            if all(name in unused_names for name in info.names):
-                if info.end_lineno:
-                    del result_lines[info.lineno - 1 : info.end_lineno]
-                else:
-                    del result_lines[info.lineno - 1]
-                continue
-
-            if not any(name in unused_names for name in info.names):
-                continue
-
-            if info.end_lineno:
-                fixed_lines = self._fix_multiline_import(info)
-                result_lines[info.lineno - 1 : info.end_lineno] = fixed_lines
+    def generate_import_clause(self, line_no: int, import_info: ImportInfo) -> str:
+        """Generate the import clause for the given import info."""
+        if line_no != import_info.lineno:
+            return ""
+        if not import_info.names_in_use:
+            return ""
+        if import_info.is_from:
+            if import_info.lineno == import_info.end_lineno:
+                return f"from {import_info.module} import {', '.join([name[1] + ' as ' + name[0] if name[0] else name[1] for name in import_info.names_in_use])}"
             else:
-                fixed = self._fix_simple_import(info)
-                if fixed:
-                    result_lines[info.lineno - 1] = fixed
-
-        return "\n".join(result_lines) + "\n"
-
-
-def fix_file(filepath: str, write: bool = False) -> Optional[str]:
-    """
-    Fix unused imports in the given file.
-    If write=True, overwrites the original file, otherwise returns the fixed content.
-    """
-    with open(filepath, "r", encoding="utf-8") as f:
-        source = f.read()
-
-    fixer = ImportFixer(source)
-    fixed = fixer.fix()
-
-    if write:
-        if fixed != source:
-            with open(filepath, "w", encoding="utf-8") as f:
-                f.write(fixed)
-        return None
-    return fixed
+                new_line = '\n'
+                trailing = ',\n    '
+                return f"from {import_info.module} import ({new_line}    {trailing.join([name[1] + ' as ' + name[0] if name[0] else name[1] for name in import_info.names_in_use])}{new_line})"
+        else:
+            return f"import {', '.join([name[1] + ' as ' + name[0] if name[0] else name[1] for name in import_info.names_in_use])}"
